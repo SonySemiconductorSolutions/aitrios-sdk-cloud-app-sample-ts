@@ -29,6 +29,7 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+src/common/console_access_settings.yaml
 
 # vercel
 .vercel

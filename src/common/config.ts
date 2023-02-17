@@ -14,9 +14,33 @@
  * limitations under the License.
  */
 
-export const ConsoleAccessLibrarySettings = {
-  baseUrl: 'baseUrl',
-  tokenUrl: 'tokenUrl',
-  clientSecret: 'clientSecret',
-  clientId: 'clientId'
+import * as yaml from 'js-yaml'
+import * as fs from 'fs'
+
+export interface ConsoleAccessLibrarySettings {
+    consoleEndpoint: string
+    portalAuthorizationEndpoint: string
+    clientSecret: string
+    clientId: string
+}
+
+const ConsoleAccessLibrarySettingsFile = './common/console_access_settings.yaml'
+
+export function getConsoleAccessLibrarySettings () {
+  if (!fs.existsSync(ConsoleAccessLibrarySettingsFile)) {
+    console.log('console_access_settings.yaml file is not exist.')
+    return
+  }
+  if (fs.lstatSync(ConsoleAccessLibrarySettingsFile).isSymbolicLink()) {
+    console.log('Can\'t open symbolic link console_access_settings.yaml file.')
+    return
+  }
+  const consoleAccessSettingFileData = yaml.load(fs.readFileSync(ConsoleAccessLibrarySettingsFile, { encoding: 'utf8', flag: 'r' }))
+  const consoleAccessSettings: ConsoleAccessLibrarySettings = {
+    consoleEndpoint: consoleAccessSettingFileData.console_access_settings.console_endpoint,
+    portalAuthorizationEndpoint: consoleAccessSettingFileData.console_access_settings.portal_authorization_endpoint,
+    clientSecret: consoleAccessSettingFileData.console_access_settings.client_secret,
+    clientId: consoleAccessSettingFileData.console_access_settings.client_id
+  }
+  return consoleAccessSettings
 }

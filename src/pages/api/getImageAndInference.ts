@@ -15,26 +15,37 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { ConsoleAccessLibrarySettings } from '../../common/config'
-import { Client } from 'consoleAccessLibrary'
+import { Client, Config } from 'consoleAccessLibrary'
+import { getConsoleAccessLibrarySettings, ConsoleAccessLibrarySettings } from '../../common/config'
 
 const getImageAndInference = async (deviceId: string, outputSubDir: string) => {
-  const client = await Client.createInstance(ConsoleAccessLibrarySettings)
+  const connectionInfo: ConsoleAccessLibrarySettings = getConsoleAccessLibrarySettings()
+  let config:Config
+  try {
+    config = new Config(connectionInfo.consoleEndpoint, connectionInfo.portalAuthorizationEndpoint, connectionInfo.clientId, connectionInfo.clientSecret)
+  } catch {
+    throw new Error('Unable to create instance.')
+  }
+  const client = await Client.createInstance(config)
   if (!client) {
     throw new Error('Unable to create instance.')
   }
 
-  const imageData = await client.insight?.getImages(deviceId, outputSubDir)
-  const latestImage = imageData.data.images[imageData.data.images.length - 1]
+  const orderBy = 'DESC'
+  const numberOfImages = 1
+  const skip = 0
+
+  const imageData = await client.insight?.getImages(deviceId, outputSubDir, numberOfImages, skip, orderBy)
+  const latestImage = imageData.data.images[0]
   console.log('GetImages response: ', JSON.stringify(latestImage.name))
   const ts = (latestImage.name).replace('.jpg', '')
   const base64Img = `data:image/jpg;base64,${latestImage.contents}`
 
   const NumberOfInferenceresults = 1
-  const filter = ''
+  const filter = undefined
   const raw = 1
   const time = ts
-  const resInference = await client.insight.getInferenceresults(deviceId, NumberOfInferenceresults, filter, raw, time)
+  const resInference = await client.insight.getInferenceResults(deviceId, filter, NumberOfInferenceresults, raw, time)
 
   let inferenceData = {}
   inferenceData = resInference.data[0].inferences[0].O
