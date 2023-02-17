@@ -14,11 +14,18 @@
  * limitations under the License.
  */
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { Client } from 'consoleAccessLibrary'
-import { ConsoleAccessLibrarySettings } from '../../common/config'
+import { Client, Config } from 'consoleAccessLibrary'
+import { getConsoleAccessLibrarySettings, ConsoleAccessLibrarySettings } from '../../common/config'
 
 const getCommandParameterFile = async (deviceId: string) => {
-  const client = await Client.createInstance(ConsoleAccessLibrarySettings)
+  const connectionInfo: ConsoleAccessLibrarySettings = getConsoleAccessLibrarySettings()
+  let config:Config
+  try {
+    config = new Config(connectionInfo.consoleEndpoint, connectionInfo.portalAuthorizationEndpoint, connectionInfo.clientId, connectionInfo.clientSecret)
+  } catch {
+    throw new Error('Unable to create instance.')
+  }
+  const client = await Client.createInstance(config)
   if (!client) {
     throw new Error('Unable to create instance.')
   }
