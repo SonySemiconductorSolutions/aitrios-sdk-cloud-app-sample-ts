@@ -14,18 +14,23 @@
  * limitations under the License.
  */
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { Client } from 'consoleAccessLibrary'
-import { ConsoleAccessLibrarySettings } from '../../common/config'
+import { Client, Config } from 'consoleAccessLibrary'
+import { getConsoleAccessLibrarySettings, ConsoleAccessLibrarySettings } from '../../common/config'
 
 const getDevices = async () => {
-  const client = await Client.createInstance(ConsoleAccessLibrarySettings)
+  const connectionInfo: ConsoleAccessLibrarySettings = getConsoleAccessLibrarySettings()
+  let config:Config
+  try {
+    config = new Config(connectionInfo.consoleEndpoint, connectionInfo.portalAuthorizationEndpoint, connectionInfo.clientId, connectionInfo.clientSecret)
+  } catch {
+    throw new Error('Unable to create instance.')
+  }
+  const client = await Client.createInstance(config)
   if (!client) {
     throw new Error('Unable to create instance.')
   }
 
-  const queryParams = {
-  }
-  const res = await client.deviceManagement?.getDevices(queryParams)
+  const res = await client.deviceManagement?.getDevices()
   return res.data
 }
 
@@ -36,12 +41,11 @@ export default async function handler (req: NextApiRequest, res: NextApiResponse
   }
   await getDevices()
     .then(result => {
-      const deviceData = {}
+      const deviceList = []
       result.devices.forEach(elm => {
-        const modelIds = elm.models.map(model => model.model_version_id.split(':')[0]).filter(modelName => modelName !== '')
-        if (modelIds.length === 0) return
-        deviceData[elm.device_id] = modelIds
+        deviceList.push(elm.device_id)
       })
+      const deviceData = { deviceId: deviceList }
       res.status(200).json(deviceData)
     }).catch(err => {
       if (err.response) {

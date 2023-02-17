@@ -55,7 +55,7 @@ export default function Home () {
         if (Object.keys(response.data).length === 0) {
           return window.alert('Connected device not found.')
         }
-        setDeviceData(response.data)
+        setDeviceData(response.data.deviceId)
       })
       .catch((err) => {
         handleResponseErr(err)
