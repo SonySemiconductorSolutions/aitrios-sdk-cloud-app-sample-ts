@@ -1,0 +1,485 @@
+= Cloud SDK pass:[<br/>] サンプルアプリケーション pass:[<br/>] TypeScript版 pass:[<br/>] チュートリアル pass:[<br/>] 
+:sectnums:
+:sectnumlevels: 1
+:author: Copyright 2023 Sony Semiconductor Solutions Corporation
+:version-label: Version 
+:revnumber: x.x.x
+:revdate: YYYY - MM - DD
+:trademark-desc: AITRIOS™、およびそのロゴは、ソニーグループ株式会社またはその関連会社の登録商標または商標です。
+:toc:
+:toc-title: 目次
+:toclevels: 1
+:chapter-label:
+:lang: ja
+
+== 更新履歴
+
+|===
+|Date |What/Why 
+
+|2022/12/12
+|初版作成
+
+|2023/1/30
+|誤記修正 + 
+表現統一 + 
+記法修正 + 
+図文字サイズ修正 + 
+PDFビルド環境更新 +
+サンプルアプリケーションリポジトリ構成の[config.ts]の説明変更 +
+「サンプルアプリケーション実行の準備をする」の接続先情報設定方法変更 +
+ユースケース毎の実装説明の「**Cloud SDK**」の0.2.0対応
+
+|2023/5/26
+|FlatBuffers version upにともなう「サンプルアプリケーションリポジトリ構成」「参考資料」修正 +
+「サンプルアプリケーションが依存するPackage（フレームワーク）」にjs-yaml不足していたため追加 +
+「ユースケース毎の実装説明」のコード引用ミス修正 + 
+ツール名の括弧の表記の修正 + 
+図の代替テキスト追加
+|===
+
+== はじめに
+このチュートリアルでは、「**Cloud SDK**」を用いたサンプルアプリケーションについて解説します。 +
+このサンプルアプリケーションは、「**Cloud SDK**」の基本的な使い方を体験して頂くために用意しています。 +
+サンプルアプリケーションでは、「**Cloud SDK**」を利用してエッジAIデバイスを制御する方法と、「**Console for AITRIOS**」 (以下、「**Console**」と記載)にUploadされたエッジAIデバイスの出力を確認する方法を確認できます。
+
+[#_precondition]
+== 前提条件
+=== 接続情報
+サンプルアプリケーションを使用するには、アプリケーションから「**Console**」へアクセスするための接続情報が必要になります。 +
+取得した情報は<<#_Execute_sampleapp,「1.サンプルアプリケーション実行の準備をする」>>で利用します。 +
+必要な接続情報は下記の通りです。
+
+* クライアントアプリ詳細情報
+** 「**Portal for AITRIOS**」のクライアントアプリ一覧から参照または、必要に応じてサンプルアプリケーション向けのクライアントアプリ登録を行い、下記情報の取得を行ってください。
+詳細は、 https://developer.aitrios.sony-semicon.com/documents/portal-user-manual[「**Portalユーザーマニュアル**」] の「SDK用のClient Secretを発行する」をお読みください。
+*** クライアントID
+*** シークレット
++
+** link:++https://developer.aitrios.sony-semicon.com/file/download/rest-api-authentication++[こちらのドキュメント]から下記の情報を取得してください。
+*** コンソールエンドポイント
+*** ポータル認証エンドポイント
+
+=== エッジAIデバイス
+サンプルアプリケーションを正常に動作させるためには、利用するエッジAIデバイスに特定の設定が必要になります。 +
+必要な設定内容は下記の通りです。
+
+* AIモデルやアプリケーションがデプロイされていること
+* ベースAIモデルに、Object DetectionのAIモデルがデプロイされていること
+* 「**Console**」のUIから、利用するCommand Parameter Fileを下記の設定にしておくこと
++
+
+** Mode=1(Image&Inference Result) 
+** UploadMethodIR="Mqtt" 
+** AIモデルやアプリケーションの内容に応じて、その他のパラメータも変更する必要がある
+
+== サンプルアプリケーション動作環境
+https://developer.aitrios.sony-semicon.com/file/download/develop-env-setup/[「**SDK スタートガイド**」]を参照してください。
+
+== サンプルアプリケーション機能概要
+サンプルアプリケーションでは、「**Console**」に登録されたエッジAIデバイスを指定し、アプリケーションが推論結果と画像を取得するために必要な機能を実装しています。 +
+実装されている機能は下記の三点です。
+
+* 「**Console**」に登録されたエッジAIデバイスの情報取得
+* エッジAIデバイスへの推論開始・停止指示
++
+推論開始を行うことによって、エッジAIデバイスは推論結果・画像を「**Console**」へUploadします。
+* 「**Console**」の推論結果・画像の取得、取得結果の表示
+
+
+== サンプルアプリケーションリポジトリ構成
+サンプルアプリケーションの動作環境は下記の通りです。 +
+実装にかかわらない部分に関しては省略します。
+----
+aitrios-sdk-cloud-app-sample-ts
+├── src (1)
+│   ├── common
+│   │   └── config.ts (2)
+│   ├── components (3)
+│   │   ├── Button
+│   │   │   └── index.tsx
+│   │   └── DropDownList
+│   │       └── index.tsx
+│   ├── hooks
+│   │   └── useInterval.js (4)
+│   ├── next-env.d.ts
+│   ├── pages
+│   │   ├── api
+│   │   │   ├── getCommandParameterFile.ts (5)
+│   │   │   ├── getDeviceData.ts (6)
+│   │   │   ├── getImageAndInference.ts (7)
+│   │   │   ├── startUpload.ts (8)
+│   │   │   └── stopUpload.ts (9)
+│   │   ├── _app.tsx (10)
+│   │   └── index.tsx (11)
+│   ├── public
+│   │   ├── favicon.ico (12)
+│   │   └── label.json (13)
+│   ├── styles
+│   │   ├── globals.css (14)
+│   │   └── Home.module.css (15)
+│   ├── tsconfig.json (16)
+│   └── util
+│       ├── bounding-box.ts (17)
+│       ├── bounding-box2d.ts (18)
+│       ├── general-object.ts (19)
+│       ├── object-detection-data.ts (20)
+│       ├── object-detection-top.ts (21)
+│       └── sample.ts (22)
+----
+(1) src: サンプルアプリケーション格納フォルダ +
+(2) config.ts : 「**Console**」への接続情報取得ロジック +
+(3) components : Button / DropDownListコンポーネントロジック格納フォルダ +
+(4) useInterval.js : インターバルロジック +
+(5) getCommandParameterFile.ts : エッジAIデバイスのパラメータ取得ロジック +
+(6) getDeviceData.ts : 「**Console**」に登録されたエッジAIデバイスの情報取得ロジック +
+(7) getImageAndInference.ts : Cloud Storageから推論結果と画像を取得ロジック +
+(8) startUpload.ts : 推論開始ロジック +
+(9) stopUpload.ts : 推論停止ロジック +
+(10) _app.tsx : サンプルアプリケーションのフロントエンド初期化 +
+(11) index.tsx : サンプルアプリケーションのフロントエンドUI +
+(12) favicon.ico : サンプルアプリケーションのシンボルアイコン +
+(13) label.json : 推論結果の表示ラベル +
+(14) globals.css : サンプルアプリケーションのフロントエンドスタイルシート +
+(15) Home.module.css : サンプルアプリケーションのフロントエンドスタイルシート +
+(16) tsconfig.json : コンパイラ設定ファイル +
+(17) bounding-box.ts : Deserialize用ソースコード +
+(18) bounding-box2d.ts : Deserialize用ソースコード +
+(19) general-object.ts : Deserialize用ソースコード +
+(20) object-detection-data.ts : Deserialize用ソースコード +
+(21) object-detection-top.ts : Deserialize用ソースコード +
+(22) sample.ts : サンプルアプリケーションのフロントエンドUIで動作するTypeScriptロジック
+
+=== ソースコードの解説
+
+サンプルアプリケーションの概要は下記の図のようになります。
+
+image::diagram_ts.png[alt="サンプルアプリケーションの概要",width="400",align="center"]
+
+サンプルアプリケーションはNext.jsフレームワークで構成しています。
+
+サンプルアプリケーションから「**Cloud SDK**」を呼び出し、「**Console**」を経由してエッジAIデバイスを制御します。 +
+エッジAIデバイスが取得したデータは「**Console**」に保存されます。 +
+サンプルアプリケーションは「**Cloud SDK**」を使用して「**Console**」からデータを取得します。
+
+=== サンプルアプリケーションが依存するPackage（フレームワーク）
+
+* 「**Console Access Library**」
+* https://nodejs.org/en/download/[node]
+* https://github.com/axios/axios[axios]
+* https://github.com/acode/lib-node[lib]
+* https://nextjs.org/[next]
+* https://reactjs.org/[react]
+* https://reactjs.org/docs/react-dom.html[react-dom]
+* https://google.github.io/flatbuffers/[FlatBuffers]
+* https://github.com/nodeca/js-yaml[js-yaml]
+
+
+[#_Execute_sampleapp]
+== サンプルアプリケーション実行方法
+<<#_precondition,前提条件>>で用意した接続情報を使用します。
+
+=== 1.サンプルアプリケーション実行の準備をする
+Codespaces上から、 [src/common]配下に[console_access_settings.yaml]を作成し接続先情報を設定します。
+
+|===
+|src/common/console_access_settings.yaml
+a|
+[source,Yaml]
+----
+console_access_settings:
+  console_endpoint: "コンソールエンドポイント"
+  portal_authorization_endpoint: "ポータル認証エンドポイント"
+  client_secret: "シークレット"
+  client_id: "クライアントID"
+----
+|===
+* `**console_endpoint**` に、取得したコンソールエンドポイントを指定します。 +
+* `**portal_authorization_endpoint**` に、取得したポータル認証エンドポイントを指定します。 +
+* `**client_secret**` に、登録したアプリケーションの シークレット を指定します。 +
+* `**client_id**` に、登録したアプリケーションの クライアントID を指定します。 +
+
+IMPORTANT: クライアントID と シークレット の組み合わせは、「**Console**」へのアクセス情報となります。 +
+公開したり、他者との共有をせず、取り扱いには十分注意してください。
+
+NOTE: Proxy環境でサンプルアプリケーション実行する場合、環境変数 `**https_proxy**` の設定をしてください。
+
+image::prepare_ts_ja.png[alt="サンプルアプリケーション実行の準備をする",width="700",align="center"]
+
+=== 2.サンプルアプリケーションを開始する
+Codespacesのターミナルからpackageのインストールとサンプルアプリケーションの起動を行います。
+ 
+....
+$ npm install
+$ npm run dev
+....
+
+image::launch_app_ts_ja.png[alt="サンプルアプリケーションを開始する",width="700",align="center"]
+
+=== 3.推論を開始する
+Codespacesのポップアップからブラウザでサンプルアプリケーションを起動し、推論を開始します。
+ 
+. [**DeviceID**]のリストからDevice IDを選択する
+. [**START**]をクリックし、エッジAIデバイスの推論を開始する
+
+image::start_inference_ts_ja.png[alt="推論を開始する",width="700",align="center"]
+
+=== 4.推論結果と画像を確認する
+推論開始中は、"**Image/Inference**"エリアに画像と推論結果を表示します。
+
+image::running_ts_ja.png[alt="推論結果と画像を確認する",width="700",align="center"]
+
+
+=== 5.推論を停止する
+サンプルアプリケーションの[**STOP**]をクリックし、エッジAIデバイスの推論を停止します。
+
+image::stop_inference_ts_ja.png[alt="推論を停止する",width="700",align="center"]
+
+== ユースケース毎の実装説明
+
+=== 1.「**Console**」に登録されたエッジAIデバイスの情報を取得する
+
+「**Console**」を利用するために、「**Cloud SDK**」のClientを生成します。 +
+生成したClientから、「**Console**」の提供する機能を利用します。
+
+* ライブラリインポート
++
+[source,TypeScript]
+----
+import { Client, Config } from 'consoleAccessLibrary'
+----
++
+上記のように、「**Cloud SDK**」のClient生成に必要なライブラリをimportします。
+
+* 「**Cloud SDK**」のClient生成
++
+[source,TypeScript]
+----
+const config = new Config(console_endpoint, portal_authorization_endpoint, client_id, client_secret);
+const client = await Client.createInstance(config)
+----
+上記は、「**Cloud SDK**」のClientを生成するためのソースコードです。 +
+`**Config**` に接続情報を指定し、 `**config**` を生成します。 +
+`**Client**` に `**config**` を指定し、 `**client**` を生成します。
+
+* デバイス情報取得
++
+[source,TypeScript]
+----
+const config = new Config(console_endpoint, portal_authorization_endpoint, client_id, client_secret);
+const client = await Client.createInstance(config)
+const queryParams = {}
+const res = await client?.deviceManagement?.getDevices(queryParams)
+----
+上記の例では、「**Console**」から登録されているエッジAIデバイスの情報を取得しています。 +
+生成したClientを利用し、`**deviceManagement**` が提供する `**getDevices**` を実行することでデバイス情報を取得できます。 +
+オプションで `**queryParams**` に取得条件を設定できます。
+
+* デバイスパラメータ取得
++
+[source,TypeScript]
+----
+const config = new Config(console_endpoint, portal_authorization_endpoint, client_id, client_secret);
+const client = await Client.createInstance(config)
+const res = await client?.deviceManagement?.getCommandParameterFile()
+----
+上記のように、`**client**` を生成します。 +
+`**client**` の `**deviceManagement**` が提供する `**getCommandParameterFile**` を使用してデバイスのパラメータを取得します。
+
+=== 2.エッジAIデバイスへ推論開始を指示する
+
+* 推論開始
++
+[source,TypeScript]
+----
+const config = new Config(console_endpoint, portal_authorization_endpoint, client_id, client_secret);
+const client = await Client.createInstance(config)
+const res = await client?.deviceManagement?.startUploadInferenceResult(deviceId)
+----
+上記のように、`**client**` を生成します。 +
+`**client**` の `**deviceManagement**` が提供する `**startUploadInferenceResult**` を使用して推論を開始します。
+
+=== 3.「**Console**」の推論結果・画像を取得する
+「**Console**」から推論結果・画像を取得する為に、Clientが提供する機能を利用します。
+
+* 画像リストを取得する
++
+[source,TypeScript]
+----
+const config = new Config(console_endpoint, portal_authorization_endpoint, client_id, client_secret);
+const client = await Client.createInstance(config)
+const imageData = await client?.insight?.getImages(deviceId, subDirectoryName, numberOfImages, skip, orderBy)
+----
+上記のように、`**client**` を生成します。 +
+`**insight**` が提供する `**getImages**` を使用して画像リストを取得します。 +
+
+* 最新の画像を取得し、推論結果と紐付ける
++
+[source,TypeScript]
+----
+const config = new Config(console_endpoint, portal_authorization_endpoint, client_id, client_secret);
+const client = await Client.createInstance(config)
+const orderBy = 'DESC'
+const numberOfImages = 1
+const skip = 0
+const imageData = await client?.insight?.getImages(deviceId, outputSubDir, numberOfImages, skip, orderBy)
+const latestImage = imageData.data.images[0]
+const ts = (latestImage.name).replace('.jpg', '')
+const base64Img = `data:image/jpg;base64,${latestImage.contents}`
+----
+上記のソースコードで、画像のリストから最新の画像情報を取得します。 +
+`**base64Img**` に、最新の画像データを取得します。 +
+`**ts**` に、最新の画像のタイムスタンプを取得します。 +
+推論結果と画像はそれぞれのタイムスタンプで紐づいています。 +
+`**ts**` を使用して、画像に紐づいた推論結果の取得関数を呼び出します。
+
+* 最新の画像に紐づく推論結果を取得する
++
+[source,TypeScript]
+----
+const config = new Config(console_endpoint, portal_authorization_endpoint, client_id, client_secret);
+const client = await Client.createInstance(config)
+const filter = undefined
+const NumberOfInferenceResults = 1
+const raw = 1
+const time = ts
+const resInference = await client?.insight?.getInferenceResults(deviceId, filter, NumberOfInferenceResults, raw, time)
+----
+上記のように、`**client**` を生成します。 +
+`**insight**` が提供する `**getInferenceResults**` を使用して推論結果のリストを取得します。 +
+`**filter**` は検索フィルタを指定する引数です。 +
+`**NumberOfInferenceResults**` で、取得する推論結果の数を指定します。 +
+`**raw**` は格納された推論結果にアクセスするための引数です。 +
+`**time**` は、取得する推論結果のタイムスタンプを指定します。
+
+* 推論結果のDeserialize
++
+[source,TypeScript]
+----
+const deserializedInferenceData = deserialize(inferenceData)
+----
+上記のソースコードでは、「**Console**」から取得した推論結果を参照可能な形式へ変換する処理を行っています。 +
+この変換処理の詳細について、 https://github.com/SonySemiconductorSolutions/aitrios-sdk-deserialization-sample[「Cloud SDK Deserialize サンプル」] を参照してください。
+
+
+=== 4.エッジAIデバイスへの推論停止を指示する
+
+* 推論停止
++
+[source,TypeScript]
+----
+const config = new Config(console_endpoint, portal_authorization_endpoint, client_id, client_secret);
+const client = await Client.createInstance(config)
+const res = await client?.deviceManagement?.stopUploadInferenceResult(deviceId)
+----
+エッジAIデバイスの推論処理を停止するには、上記のように `**client**` の `**deviceManagement**` が提供する `**stopUploadInferenceResult**` を実行します。 +
+引数の `**deviceId**` には、停止対象の Device ID を指定します。
+
+== 参考資料
+
+=== 取得した推論結果の表示（サンプルアプリケーションの表示処理）
+
+[source,JavaScript]
+----
+type InferenceItem = {
+  'class_id': number, // オブジェクトラベルのindex
+  'score': number,    // オブジェクトラベルの確度
+  'left': number,     // オブジェクトのX座標開始位置
+  'top': number,      // オブジェクトのY座標開始位置
+  'right': number,    // オブジェクトのX座標終了位置
+  'bottom': number    // オブジェクトのy座標終了位置
+}
+const drawBoundingBox = (image, inferenceData, context, labels) => {
+  if (context !== null) {
+    const img = new window.Image()
+    img.src = image
+    img.onload = () => {
+      const canvas = document.getElementById('canvas') as HTMLCanvasElement
+      canvas.width = img.width
+      canvas.height = img.height
+      context.drawImage(img, 0, 0)
+
+      // 取得した推論結果を表示
+      for (const [key, value] of Object.entries(inferenceData)) {
+        if (key === 'T') continue
+        const v = value as InferenceItem
+        context.lineWidth = 3
+        context.strokeStyle = 'rgb(255, 255, 0)'
+
+        // バウンディングボックスの座標を指定
+        context.strokeRect(v.left, v.top, Math.abs(v.left - v.right), Math.abs(v.top - v.bottom))
+
+        // ラベルを表示する座標を指定
+        const labelPointX = (v.right > 270 ? v.right - 70 : v.right)
+        const labelPointY = (v.bottom > 300 ? v.bottom - 10 : v.bottom)
+
+        context.font = '20px Arial'
+        context.fillStyle = 'rgba(255, 255, 0)'
+
+        // ラベル、確率を表示
+        context.fillText(`${labels[v.class_id]} ${Math.round(v.score * 100)}%`, labelPointX, labelPointY)
+      }
+    }
+  }
+}
+----
+
+* 画像リストで取得される画像パスのフォーマット
++
+----
+<blobcontainer_name>/<deviceId>/JPG/<subDirectoryName>/YYYYMMDDHHMMSSFFF.jpg
+----
+* 推論結果（Object Detection）のサンプルデータ + 
+Inferences[]の部分が推論結果 + 
+下記サンプルデータでは、2件のオブジェクト検出 +
+検出結果はserializeされているが、下記サンプルデータではdeserializeされたデータ形式
++
+[source,Json]
+----
+{
+    "DeviceID": "123456789ABC",
+    "ModelID": "0000000000000000",
+    "Image": true,
+    "Inferences": [
+        {
+            "1": {
+                "class_id": 18,
+                "score": 0.03125,
+                "left": 8,
+                "top": 0,
+                "right": 303,
+                "bottom": 107
+            },
+            "2": {
+                "class_id": 19,
+                "score": 0.02734375,
+                "left": 2,
+                "top": 230,
+                "right": 38,
+                "bottom": 319
+            },
+            "T": "20220101010101000"
+        }
+    ],
+    "id": "00000000-0000-0000-0000-000000000000",
+    "_rid": "AAAAAAAAAAAAAAAAAAAAAA==",
+    "_self": "dbs/XXXXXX==/colls/CCCCCCCCCCCC=/docs/AAAAAAAAAAAAAAAAAAAAAA==/",
+    "_etag": "\"00000000-0000-0000-0000-000000000000\"",
+    "_attachments": "attachments/",
+    "_ts": 1111111111
+}
+----
++
+検出結果のパラメータは下記の通りです。
++
+class_id: オブジェクトラベルのindex
++
+score: オブジェクトラベルの確度
++
+left: オブジェクトのX座標開始位置
++
+top: オブジェクトのY座標開始位置
++
+right: オブジェクトのX座標終了位置
++
+bottom: オブジェクトのY座標終了位置
