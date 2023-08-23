@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Sony Semiconductor Solutions Corp. All rights reserved.
+ * Copyright 2022, 2023 Sony Semiconductor Solutions Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,12 +23,12 @@ import useInterval from '../hooks/useInterval'
 import { getImageAndInference, deserialize, drawBoundingBox, handleOnChangeDeviceId, handleOnClickStartBtn, handleOnClickStopBtn, handleResponseErr } from '../util/sample'
 
 export type InferenceItem = {
-  C: number,
-  P: number,
-  X: number,
-  Y: number,
-  x: number,
-  y: number
+  'class_id': number,
+  'score': number,
+  'left': number,
+  'top': number,
+  'right': number,
+  'bottom': number
 }
 const TIME_OUT = 20000
 export default function Home () {
