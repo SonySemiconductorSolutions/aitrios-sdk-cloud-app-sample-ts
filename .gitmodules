@@ -1,6 +1,3 @@
-[submodule ".devcontainer/Dependencies/aitrios-sdk-typescript-dev"]
-	path = .devcontainer/Dependencies/aitrios-sdk-typescript-dev
-	url = https://github.com/SonySemiconductorSolutions/aitrios-sdk-typescript-dev.git
-[submodule "aitrios-sdk-console-access-lib-ts"]
-	path = aitrios-sdk-console-access-lib-ts
+[submodule ".devcontainer/Dependencies/aitrios-sdk-console-access-lib-ts"]
+	path = .devcontainer/Dependencies/aitrios-sdk-console-access-lib-ts
 	url = https://github.com/SonySemiconductorSolutions/aitrios-sdk-console-access-lib-ts
