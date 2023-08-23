@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Sony Semiconductor Solutions Corp. All rights reserved.
+ * Copyright 2022, 2023 Sony Semiconductor Solutions Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,10 @@
  */
 import axios from 'axios'
 import { InferenceItem } from '../pages'
-import { flatbuffers } from 'flatbuffers'
-import { SmartCamera } from './ObjectdetectionGenerated'
+import * as flatbuffers from 'flatbuffers'
+import { BoundingBox } from './bounding-box'
+import { BoundingBox2d } from './bounding-box2d'
+import { ObjectDetectionTop } from './object-detection-top'
 /* global HTMLCanvasElement */
 
 export const getImageAndInference = (setContext, selectedDeviceId, outputSubDirctory, context, labels, deserialize, drawBoundingBox, handleResponseErr) => {
@@ -55,12 +57,12 @@ export function deserialize (inferenceData) {
   }
 
   type Inference = {
-    'C': number,
-    'P': number,
-    'X': number,
-    'Y': number,
-    'x': number,
-    'y': number
+    'class_id': number,
+    'score': number,
+    'left': number,
+    'top': number,
+    'right': number,
+    'bottom': number
   }
   // Base64 decode
   let decodedData: Buffer
@@ -72,7 +74,7 @@ export function deserialize (inferenceData) {
   }
 
   // Deserialize
-  const pplOut = SmartCamera.ObjectDetectionTop.getRootAsObjectDetectionTop(new flatbuffers.ByteBuffer(decodedData))
+  const pplOut = ObjectDetectionTop.getRootAsObjectDetectionTop(new flatbuffers.ByteBuffer(decodedData))
   const readObjData = pplOut.perception()
   const resNum = readObjData.objectDetectionListLength()
   console.log('NumOfDetections:' + String(resNum))
@@ -82,15 +84,15 @@ export function deserialize (inferenceData) {
   for (let i = 0; i < resNum; i++) {
     const objList = readObjData.objectDetectionList(i)
     const unionType = objList.boundingBoxType()
-    if (unionType === SmartCamera.BoundingBox.BoundingBox2d) {
-      const bbox2d = objList.boundingBox(new SmartCamera.BoundingBox2d())
+    if (unionType === BoundingBox.BoundingBox2d) {
+      const bbox2d = objList.boundingBox(new BoundingBox2d())
       const res: Inference = {
-        C: Number(objList.classId()),
-        P: Number(objList.score()),
-        X: Number(bbox2d.left()),
-        Y: Number(bbox2d.top()),
-        x: Number(bbox2d.right()),
-        y: Number(bbox2d.bottom())
+        class_id: Number(objList.classId()),
+        score: Math.round(Number(objList.score()) * 1000000) / 1000000,
+        left: Number(bbox2d.left()),
+        top: Number(bbox2d.top()),
+        right: Number(bbox2d.right()),
+        bottom: Number(bbox2d.bottom())
       }
       const inferenceKey = String(i + 1)
       deserializedInferenceData.Inferences[0][inferenceKey] = res
@@ -114,12 +116,12 @@ export const drawBoundingBox = (image, inferenceData, context, labels) => {
         const v = value as InferenceItem
         context.lineWidth = 3
         context.strokeStyle = 'rgb(255, 255, 0)'
-        context.strokeRect(v.X, v.Y, Math.abs(v.X - v.x), Math.abs(v.Y - v.y))
-        const labelPointX = (v.x > 270 ? v.x - 70 : v.x)
-        const labelPointY = (v.y > 300 ? v.y - 10 : v.y)
+        context.strokeRect(v.left, v.top, Math.abs(v.left - v.right), Math.abs(v.top - v.bottom))
+        const labelPointX = (v.right > 270 ? v.right - 70 : v.right)
+        const labelPointY = (v.bottom > 300 ? v.bottom - 10 : v.bottom)
         context.font = '20px Arial'
         context.fillStyle = 'rgba(255, 255, 0)'
-        context.fillText(`${labels[v.C]} ${Math.round(v.P * 100)}%`, labelPointX, labelPointY)
+        context.fillText(`${labels[v.class_id]} ${Math.round(v.score * 100)}%`, labelPointX, labelPointY)
       }
     }
   }

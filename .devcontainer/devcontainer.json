@@ -1,8 +1,18 @@
 {
 	"name": "Node.js & TypeScript",
-	"dockerComposeFile": "docker-compose.yml",
-	"service": "app",
 	"workspaceFolder": "/workspace",
+	"workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+	"build": {
+		"dockerfile": "Dockerfile",
+		"context": "..",
+		"args": {
+			// Update 'VARIANT' to pick a Node version: 16, 14, 12.
+			// Append -bullseye or -buster to pin to an OS version.
+			// Use -bullseye variants on local on arm64/Apple Silicon.
+			"VARIANT": "16-bullseye"
+		}
+	},
+	"runArgs": ["--init"],
 
 	// Set *default* container specific settings.json values on container create.
 	"settings": {},
@@ -22,7 +32,7 @@
 	"customizations": {
 		"codespaces": {
 			"repositories": {
-				"SonySemiconductorSolutions/aitrios-sdk-console-access-lib-ts": {
+				"SonySemiconductorSolutions/aitrios-sdk-typescript-dev": {
 					"permissions": {
 						"contents": "read"
 					}

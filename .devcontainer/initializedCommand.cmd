@@ -15,9 +15,9 @@
 
 SET CMDDIR=%~dp0
 
-SET ConsoleAccessLibrary=%CMDDIR%Dependencies\aitrios-sdk-console-access-lib-ts
+SET ConsoleAccessLibrary=%CMDDIR%Dependencies\aitrios-sdk-typescript-dev
 
 dir /b /a  %ConsoleAccessLibrary% | findstr "." >nul && (set EMPTY=0) || (set EMPTY=1)
 if %EMPTY% EQU 1 (
-    git submodule update --init --recursive .devcontainer\Dependencies\aitrios-sdk-console-access-lib-ts
+    git submodule update --init --recursive .devcontainer\Dependencies\aitrios-sdk-typescript-dev
 )
