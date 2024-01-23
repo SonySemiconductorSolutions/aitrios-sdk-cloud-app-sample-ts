@@ -37,7 +37,7 @@ See the ["**Cloud SDK Sample Application TypeScript Tutorial**"](./docs/developm
 
 ## See also
 - [aitrios-sdk-console-access-lib-ts](https://github.com/SonySemiconductorSolutions/aitrios-sdk-console-access-lib-ts)
-- ["**Developer Site**"](https://developer.aitrios.sony-semicon.com/en)
+- ["**Developer Site**"](https://developer.aitrios.sony-semicon.com/en/edge-ai-sensing/)
 
 ## Trademark
 - ["**Read This First**"](https://developer.aitrios.sony-semicon.com/en/documents/read-this-first)
@@ -53,4 +53,4 @@ See the "**Release Note**" from [**Releases**] for this repository.
 Each release is generated in the main branch. Pre-releases are generated in the develop branch. Releases will not be provided by other branches.
 
 ## Security
-Before using Codespaces, please read the Site Policy of GitHub and understand the usage conditions. 
+Before using Codespaces, please read the Site Policy of GitHub and understand the usage conditions.
