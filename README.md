@@ -37,7 +37,7 @@ See the ["**Cloud SDK Sample Application TypeScript Tutorial**"](./docs/developm
 
 ## See also
 - [aitrios-sdk-console-access-lib-ts](https://github.com/SonySemiconductorSolutions/aitrios-sdk-console-access-lib-ts)
-- ["**Developer Site**"](https://developer.aitrios.sony-semicon.com/en)
+- ["**Developer Site**"](https://developer.aitrios.sony-semicon.com/en/edge-ai-sensing/)
 
 ## Trademark
 - ["**Read This First**"](https://developer.aitrios.sony-semicon.com/en/documents/read-this-first)
