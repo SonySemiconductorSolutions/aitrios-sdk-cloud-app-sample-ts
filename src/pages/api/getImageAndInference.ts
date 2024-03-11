@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Sony Semiconductor Solutions Corp. All rights reserved.
+ * Copyright 2022, 2023 Sony Semiconductor Solutions Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,44 +15,50 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { Client, Config } from 'consoleAccessLibrary'
-import { getConsoleAccessLibrarySettings, ConsoleAccessLibrarySettings } from '../../common/config'
+import { getImage, getInference } from '../../hooks/getStorageData'
+import { CONNECTION_DESTINATION, SERVICE } from '../../common/settings'
 
 const getImageAndInference = async (deviceId: string, outputSubDir: string) => {
-  const connectionInfo: ConsoleAccessLibrarySettings = getConsoleAccessLibrarySettings()
-  let config:Config
-  try {
-    config = new Config(connectionInfo.consoleEndpoint, connectionInfo.portalAuthorizationEndpoint, connectionInfo.clientId, connectionInfo.clientSecret)
-  } catch {
-    throw new Error('Unable to create instance.')
+  if (CONNECTION_DESTINATION.toString() === SERVICE.Local) {
+    deviceId = ''
+    outputSubDir = ''
   }
-  const client = await Client.createInstance(config)
-  if (!client) {
-    throw new Error('Unable to create instance.')
-  }
-
+  let ts: string
+  let base64Img: string
   const orderBy = 'DESC'
   const numberOfImages = 1
   const skip = 0
-
-  const imageData = await client.insight?.getImages(deviceId, outputSubDir, numberOfImages, skip, orderBy)
-  const latestImage = imageData.data.images[0]
-  console.log('GetImages response: ', JSON.stringify(latestImage.name))
-  const ts = (latestImage.name).replace('.jpg', '')
-  const base64Img = `data:image/jpg;base64,${latestImage.contents}`
-
-  const NumberOfInferenceresults = 1
-  const filter = undefined
-  const raw = 1
-  const time = ts
-  const resInference = await client.insight.getInferenceResults(deviceId, filter, NumberOfInferenceresults, raw, time)
-
+  const errorMsgImage = 'Cannot get images.'
+  const imageData = await getImage(deviceId, outputSubDir, orderBy, skip, numberOfImages)
+  try {
+    if (!imageData || imageData.images.length === 0) {
+      throw new Error(errorMsgImage)
+    }
+    const latestImage = imageData?.images[0]
+    console.log('GetImages response: ', JSON.stringify(latestImage.name))
+    ts = (latestImage.name).replace('.jpg', '')
+    base64Img = `data:image/jpg;base64,${latestImage.contents}`
+  } catch (e) {
+    throw new Error(errorMsgImage)
+  }
+  const resInference = await getInference(deviceId, outputSubDir, ts, undefined, 1)
   let inferenceData = {}
-  inferenceData = resInference.data[0].inferences[0].O
+  const errorMsgInference = 'Cannot get inferences.'
+  try {
+    if (resInference?.length === 0 || !resInference) {
+      throw new Error(errorMsgInference)
+    }
 
-  console.log('InferenceList response:', JSON.stringify(resInference.data[0].inferences[0]))
-
-  return { imageAndInference: { image: base64Img, inferenceData } }
+    if (resInference && resInference[0].inference_result) {
+      inferenceData = resInference[0].inference_result.Inferences[0].O
+    } else {
+      inferenceData = resInference[0].Inferences[0].O
+    }
+    console.log(`InferenceList response: ${JSON.stringify(inferenceData)}`)
+    return { imageAndInference: { image: base64Img, inferenceData } }
+  } catch (e) {
+    throw new Error(errorMsgInference)
+  }
 }
 
 export default async function handler (req: NextApiRequest, res: NextApiResponse) {
@@ -71,10 +77,6 @@ export default async function handler (req: NextApiRequest, res: NextApiResponse
     .then(result => {
       res.status(200).json(result)
     }).catch(err => {
-      if (err.response) {
-        res.status(500).json({ message: err.response.data.message })
-      } else {
-        res.status(500).json({ message: err.message })
-      }
+      res.status(500).json(err.message)
     })
 }
