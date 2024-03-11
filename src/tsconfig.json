@@ -17,7 +17,8 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    "incremental": true
+    "incremental": true,
+    "experimentalDecorators": true,
   },
   "include": [
     "next-env.d.ts",
@@ -26,6 +27,7 @@
     "hooks/useInterval.js"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "aitrios-sdk-console-access-lib-ts"
   ]
 }

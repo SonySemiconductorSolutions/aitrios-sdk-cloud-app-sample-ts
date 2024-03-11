@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Sony Semiconductor Solutions Corp. All rights reserved.
+ * Copyright 2022, 2023 Sony Semiconductor Solutions Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,26 +14,33 @@
  * limitations under the License.
  */
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { Client, Config } from 'consoleAccessLibrary'
-import { getConsoleAccessLibrarySettings, ConsoleAccessLibrarySettings } from '../../common/config'
+import { CONNECTION_DESTINATION, SERVICE } from '../../common/settings'
+import { format } from 'date-fns'
+import { utcToZonedTime } from 'date-fns-tz'
+import { getConsoleService } from '../../hooks/getConsoleStorage'
 
 const startUpload = async (deviceId: string) => {
-  const connectionInfo: ConsoleAccessLibrarySettings = getConsoleAccessLibrarySettings()
-  let config:Config
-  try {
-    config = new Config(connectionInfo.consoleEndpoint, connectionInfo.portalAuthorizationEndpoint, connectionInfo.clientId, connectionInfo.clientSecret)
-  } catch {
-    throw new Error('Unable to create instance.')
+  const calClient = await getConsoleService()
+  console.log('deviceId:' + deviceId)
+  const res = await calClient.deviceManagement?.startUploadInferenceResult(deviceId)
+  console.log('startUploadInferenceResult:' + JSON.stringify(res.data))
+
+  if (typeof res.result !== 'undefined' && (res.result === 'ERROR')) {
+    throw new Error(res.message)
   }
-  const client = await Client.createInstance(config)
-  if (!client) {
-    throw new Error('Unable to create instance.')
+  if (typeof res.data.result !== 'undefined' && res.data.result === 'WARNING') {
+    throw new Error(res.data.message)
   }
 
-  console.log('deviceId:' + deviceId)
-  const res = await client.deviceManagement?.startUploadInferenceResult(deviceId)
-  console.log('startUploadInferenceResult:' + JSON.stringify(res.data))
-  return res.data
+  const response = res.data
+  if (CONNECTION_DESTINATION.toString() === SERVICE.Local && response.result === 'SUCCESS') {
+    const currentDate = new Date()
+    const utcDate = utcToZonedTime(currentDate, 'UTC')
+    const dateFormat = 'yyyyMMddHHmmssSSS'
+    const outputSubDirectory = format(utcDate, dateFormat)
+    response.outputSubDirectory = `local/deviceId/image/${outputSubDirectory}`
+  }
+  return response
 }
 
 export default async function handler (req: NextApiRequest, res: NextApiResponse) {
@@ -47,10 +54,6 @@ export default async function handler (req: NextApiRequest, res: NextApiResponse
     .then(result => {
       res.status(200).json(result)
     }).catch(err => {
-      if (err.response) {
-        res.status(500).json({ message: err.response.data.message })
-      } else {
-        res.status(500).json({ message: err.message })
-      }
+      res.status(500).json(err.message)
     })
 }

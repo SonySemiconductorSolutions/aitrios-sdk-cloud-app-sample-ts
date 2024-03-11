@@ -37,12 +37,17 @@ Fixed a lack of js-yaml in the "Package (framework) on which the sample applicat
 Fixed a code misquote in the "Implementation description for each use case" + 
 Fixed parenthesis notation for tool names + 
 Added alternate text to images
+
+|2023/12/22
+|Console Developer Edition and Console
+Enterprise Edition support 
 |===
 
 == Introduction
 This tutorial explains a sample application using the "**Cloud SDK**". + 
 This sample application demonstrates the basic use of the "**Cloud SDK**". + 
-You can see how to control an edge AI device using the "**Cloud SDK**" and see the output of the edge AI device uploaded to the "**Console for AITRIOS**" (Hereafter referred to as "**Console**").
+In the sample application, one can verify how to control edge AI devices using "**Cloud SDK**" and also how to check the output of the Edge AI devices uploaded to "**Console for AITRIOS**" (hereafter, referred to as "**Console**") or "Azure Blob Storage" or "Local Storage".  + 
+However, Codespaces cannot be used when checking the inference results uploaded to the "Local Storage". 
 
 [#_precondition]
 == Prerequisite
@@ -52,14 +57,23 @@ The acquired information is used in <<#_Execute_sampleapp,"1.Prepare to run the 
 The required information is as follows:
 
 * Client application details
-** Refer to the client application list of "**Portal for AITRIOS**" or register the client application for the sample application if necessary to get the following information: 
-See the "Issuing a Client Secret for SDK" in https://developer.aitrios.sony-semicon.com/en/documents/portal-user-manual["**Portal User Manual**"] for more information.
+- When "**Console Developer Edition**" is used
+** Refer to the client application list in "**Portal for AITRIOS**" or register the client application for
+the sample application based on the requirement and obtain the following information. For
+details, refer to "Issuing a Client Secret for SDK" in the https://developer.aitrios.sony-semicon.com/documents/portal-user-manual["**Portal User Manual**"].
 *** Client ID
 *** Secret
 +
-** Get the following information from link:++https://developer.aitrios.sony-semicon.com/en/file/download/rest-api-authentication++[this material]:
+** Get the following information from link:++https://developer.aitrios.sony-semicon.com/en/file/download/rest-api-authentication++[this material].
 *** Console endpoint
 *** Portal authorization endpoint
+
+- When using "**Console Enterprise Edition**"
+** Please contact "**Console**" deployment representative (Service Administrator).
+
+
+For using "Azure Blob Storage", connection information is required to access "Azure Blob Storage". + 
+For details, refer https://learn.microsoft.com/en-us/azure/storage/common/storage-configure-connection-string#configure-a-connection-string-for-an-azure-storage-account["Configure a connection string for an Azure storage account"].
 
 === Edge AI devices
 In order for the sample application to work properly, the edge AI device must have specific settings. + 
@@ -69,10 +83,26 @@ Required settings are as follows:
 * AI model based on object detection is deployed
 * From the "**Console**" UI, set the Command Parameter File to be used to the following setting:
 +
+** When using "**Console**" +
+When not described, the following values are set automatically. +
+UploadMethod="BlobStorage" +
+UploadMethodIR="Mqtt" +
+** "Azure Blob Storage" +
+UploadMethod="BlobStorage" +
+UploadMethodIR="BlobStorage" +
+** "Local Storage" +
+UploadMethod="HTTPStorage" +
+UploadMethodIR="HTTPStorage"
 
-** Mode=1(Image&Inference Result)
-** UploadMethodIR="Mqtt"
 ** Other parameters need to be changed depending on the AI model and application content
+
+=== External transfer settings
+* When using "Azure Blob Storage" +
+When using "Azure Blob Storage", complete the settings available in https://developer.aitrios.sony-semicon.com/en/edge-ai-sensing/documents/external-transfer-settings-tutorial-for-azure-blob-storage[External transfer setting tutorial(Azure Blob Storage)]. +
+* When using "Local Storage" +
+When using "Local Storage", complete the settings available in the https://developer.aitrios.sony-semicon.com/en/edge-ai-sensing/documents/external-transfer-settings-tutorial-for-http-server[External transfer settings tutorial(Local HTTP Server)].
++
+IMPORTANT: Uploads from the device to HTTP Server are not encrypted due to HTTP communication.
 
 == Sample application operating environment
 See the https://developer.aitrios.sony-semicon.com/en/downloads#sdk-getting-started["**SDK Getting Started**"].
@@ -84,8 +114,10 @@ The following three functions are implemented:
 * Get information about edge AI devices enrolled in the "**Console**"
 * Instruct edge AI devices to start/stop inference
 +
-When an inference is started, the edge AI device uploads inference results/images to the "**Console**".
-* Get inference results/images from the "**Console**", display gotten inference results and images
+By starting inference, the EdgeAI device uploads the inference results/images to either the "**Console**" or "Azure Blob Storage" or "Local Storage".
+* Obtain the inference results/images and display the fetched results.
++
+Displays the data uploaded to "**Console**" or "Azure Blob Storage" or "Local Storage".
 
 
 == Sample application repository structure
@@ -96,60 +128,74 @@ aitrios-sdk-cloud-app-sample-ts
 ├── src (1)
 │   ├── common
 │   │   └── config.ts (2)
-│   ├── components (3)
+│   │   └── settings.ts (3)
+│   ├── components (4)
 │   │   ├── Button
 │   │   │   └── index.tsx
 │   │   └── DropDownList
 │   │       └── index.tsx
 │   ├── hooks
-│   │   └── useInterval.js (4)
+│   │   └── getAzureStorage.ts (5)
+│   │   └── getConsoleStorage.ts (6)
+│   │   └── getLocalStorage.ts (7)
+│   │   └── getStorageData.ts (8)
+│   │   └── useInterval.js (9)
 │   ├── next-env.d.ts
 │   ├── pages
 │   │   ├── api
-│   │   │   ├── getCommandParameterFile.ts (5)
-│   │   │   ├── getDeviceData.ts (6)
-│   │   │   ├── getImageAndInference.ts (7)
-│   │   │   ├── startUpload.ts (8)
-│   │   │   └── stopUpload.ts (9)
-│   │   ├── _app.tsx (10)
-│   │   └── index.tsx (11)
+│   │   │   ├── getCommandParameterFile.ts (10)
+│   │   │   ├── getDeviceData.ts (11)
+│   │   │   ├── getImageAndInference.ts (12)
+│   │   │   ├── startUpload.ts (13)
+│   │   │   └── stopUpload.ts (14)
+│   │   ├── _app.tsx (15)
+│   │   └── index.tsx (16)
 │   ├── public
-│   │   ├── favicon.ico (12)
-│   │   └── label.json (13)
+│   │   ├── favicon.ico (17)
+│   │   └── label.json (18)
 │   ├── styles
-│   │   ├── globals.css (14)
-│   │   └── Home.module.css (15)
-│   ├── tsconfig.json (16)
+│   │   ├── globals.css (19)
+│   │   └── Home.module.css (20)
+│   ├── tsconfig.json (21)
 │   └── util
-│       ├── bounding-box.ts (17)
-│       ├── bounding-box2d.ts (18)
-│       ├── general-object.ts (19)
-│       ├── object-detection-data.ts (20)
-│       ├── object-detection-top.ts (21)
-│       └── sample.ts (22)
+│   │   ├── bounding-box.ts (22)
+│   │   ├── bounding-box2d.ts (23)
+│   │   ├── general-object.ts (24)
+│   │   ├── object-detection-data.ts (25)
+│   │   ├── object-detection-top.ts (26)
+│   │   └── sample.ts (27)
+│   └── checkLocalRoot.ts (28)
+│   └── tsconfig.node.json  (29)
 ----
 (1) src : Sample application folder +
-(2) config.ts : Logic for getting connection information to the "**Console**" +
-(3) components : Button / DropDownList component logic storage folder +
-(4) useInterval.js : Interval logic +
-(5) getCommandParameterFile.ts : Logic to get parameters for the edge AI device +
-(6) getDeviceData.ts : Logic to get information about edge AI devices enrolled in the "**Console**" +
-(7) getImageAndInference.ts : Logic to get inference results and images from cloud storage +
-(8) startUpload.ts : Logic to start inference +
-(9) stopUpload.ts : Logic to stop inference +
-(10) _app.tsx : Initializing the sample application frontend +
-(11) index.tsx : Sample application frontend UI +
-(12) favicon.ico : Symbol icons for the sample application +
-(13) label.json : Inference result display label +
-(14) globals.css : Sample application frontend style sheet +
-(15) Home.module.css : Sample application frontend style sheet +
-(16) tsconfig.json : Compiler configuration file +
-(17) bounding-box.ts : Source code to deserialize +
-(18) bounding-box2d.ts : Source code to deserialize +
-(19) general-object.ts : Source code to deserialize +
-(20) object-detection-data.ts : Source code to deserialize +
-(21) object-detection-top.ts : Source code to deserialize +
-(22) sample.ts : TypeScript logic running in the sample application frontend UI
+(2) config.ts : Logic to fetch the information to connect to either the "**Console**" or "Azure Blob Storage". +
+(3) settings.ts : Specify the path of "Local Storage" and connection destination +
+(4) components : Button / DropDownList component logic storage folder +
+(5) getAzureStorage.ts : Logic to fetch the inference results and images from "Azure Blob Storage" +
+(6) getConsoleStorage.ts : Logic to fetch the inference results and images from "**Console**"  +
+(7) getLocalStorage.ts : Logic to fetch the inference results and images from "Local Storage" +
+(8) getStorageData.ts : Determines the Storage to use and invokes the logic of the appropriate Storage +
+(9) useInterval.js : Interval logic +
+(10) getCommandParameterFile.ts : Logic to get parameters for the edge AI device +
+(11) getDeviceData.ts : Logic to get information about edge AI devices enrolled in the "**Console**" +
+(12) getImageAndInference.ts : Logic to obtain the inference results and images +
+(13) startUpload.ts : Logic to start inference +
+(14) stopUpload.ts : Logic to stop inference +
+(15) _app.tsx : Initializing the sample application frontend +
+(16) index.tsx : Sample application frontend UI +
+(17) favicon.ico : Symbol icons for the sample application +
+(18) label.json : Inference result display label +
+(19) globals.css : Sample application frontend style sheet +
+(20) Home.module.css : Sample application frontend style sheet +
+(21) tsconfig.json : Compiler configuration file +
+(22) bounding-box.ts : Source code to deserialize +
+(23) bounding-box2d.ts : Source code to deserialize +
+(24) general-object.ts : Source code to deserialize +
+(25) object-detection-data.ts : Source code to deserialize +
+(26) object-detection-top.ts : Source code to deserialize +
+(27) sample.ts : TypeScript logic running in the sample application frontend UI +
+(28) checkLocalRoot.ts : Verify the LOCAL_ROOT settings +
+(29) tsconfig.node.json : Compile settings file
 
 === Source code commentary
 
@@ -159,9 +205,9 @@ image::diagram_ts.png[alt="Overview of the sample application", width="400", ali
 
 The sample application consists of the Next.js framework.
 
-Call the "**Cloud SDK**" from the sample application to control the edge AI device through the "**Console**". + 
-Data from edge AI devices is stored in the "**Console**". + 
-Sample application uses the "**Cloud SDK**" to get data from the "**Console**".
+Call the "**Cloud SDK**" from the sample application to control the edge AI device through the "**Console**". +
+The data obtained by the edge AI device is saved either in the "**Console**", "Azure Blob Storage" or "Local Storage". +
+The sample application uses "**Cloud SDK**" and fetches the data from either the "**Console**" or "Azure Blob Storage" or "Local Storage".
 
 === Package (framework) on which the sample application depends
 
@@ -174,6 +220,7 @@ Sample application uses the "**Cloud SDK**" to get data from the "**Console**".
 * https://reactjs.org/docs/react-dom.html[react-dom]
 * https://google.github.io/flatbuffers/[FlatBuffers]
 * https://github.com/nodeca/js-yaml[js-yaml]
+* https://github.com/Azure/azure-sdk-for-js[azure-sdk-for-js]
 
 
 [#_Execute_sampleapp]
@@ -181,8 +228,11 @@ Sample application uses the "**Cloud SDK**" to get data from the "**Console**".
 Use the connection information prepared in the <<#_precondition,"Prerequisite">>
 
 === 1.Prepare to run the sample application
-Create the [console_access_settings.yaml] under the [src/common] on Codespaces and set the connection information.
+. In Codepaces or in an environment where the repository is cloned, create
+[console_access_settings.yaml] under [src/common] and set the connection destination information.
 
+- When "**Console Developer Edition**" is used
++
 |===
 |src/common/console_access_settings.yaml
 a|
@@ -195,30 +245,127 @@ console_access_settings:
   client_id: "Client ID"
 ----
 |===
-* Specify the gotten console endpoint in `**console_endpoint**`. +
-* Specify the gotten portal authorization endpoint in `**portal_authorization_endpoint**`. +
-* Specify the secret of the registered application to the `**client_secret**`. +
-* Specify the client ID of the registered application to the `**client_id**`. +
+* Specify the Console endpoint in the `**console_endpoint**`. +
+* Specify the Portal authentication endpoint in `**portal_authorization_endpoint**`. +
+* Specify the Secret of the registered application in `**client_secret**`. +
+* Specify the Client ID of the registered application in the `**client_id**`. +
++
 
-IMPORTANT: The combination of the client ID and secret is access information to the "**Console**". +
-Do not publish or share with others and handle with care.
-  
-NOTE: To run the sample application in a proxy environment, set the `**https_proxy**` environment variable.
-  
+IMPORTANT: For details on how to obtain the Client ID and Secret, please refer "Issue the Client Secret for SDK" in the https://developer.aitrios.sony-semicon.com/documents/portal-user-manual["**Portal User Manual**"]. +
+For details on how to obtain the Console endpoint and the Portal authentication endpoint, please refer to link:++https://developer.aitrios.sony-semicon.com/file/download/rest-api-authentication++[this document]. +
+This is the information to access the "Console". +
+Do not disclose it to the public or share it with others and handle it with caution.
++
+
+NOTE: When executing the sample application in a Proxy environment set the
+environment variable `**https_proxy**`. +
+
+- When "**Console Enterprise Edition**" is used
++ 
+|===
+|src/common/console_access_settings.yaml
+a|
+[source,Yaml]
+----
+console_access_settings:
+  console_endpoint: "Console endpoint"
+  portal_authorization_endpoint: "Portal authentication endpoint" 
+  client_secret: "Secret"
+  client_id:  "Client ID" 
+  application_id: "Application ID"
+----
+|===
++ 
+
+* Specify the Console endpoint in `**console_endpoint**`. +
+* Specify the Portal authentication endpoint in `**portal_authorization_endpoint**`. +
+The Portal authentication endpoint is to be specified in a `**\https://login.microsoftonline.com/{tenantID}**` format. +
+* Specify the Secret of the registered application in `**client_secret**` . +
+* Specify the Client ID of the registered application in the `**client_id**`. +
+* Specify the Application ID of the registered application in `**application_id**`.
++
+
+IMPORTANT: For details on how to fetch the Console endpoint, Client ID, Secret and Tenant ID and Application ID, please contact "**Console**" deployment representative (Service Administrator). +
+Do not disclose it to the public or share it with others, handle it with care. +
++
+
+NOTE: When executing the sample application in a Proxy environment, set the
+environment variable `**https_proxy**`.
+
+. In Codepaces or in an environment where the repository is cloned, create
+[azure_access_settings.yaml] under [src/common] and set the connection destination information. +
+This setting is set when the destination to obtain the inference results is "Azure Blob Storage". 
+
++ 
+|===
+|src/common/azure_access_settings.yaml
+a|
+[source,Yaml]
+----
+azure_access_settings:
+  connection_string: "Connection information"
+  container_name: "Container name".
+----
+|===
++ 
+
+* Specify the Connection information of "Azure Blob Storage" in `**connection_string**`.
+* Specify the Container name of "Azure Blob Storage" in `**container_name**`.
+
++ 
+IMPORTANT: This is the information to access the "Azure Blob Storage". +
+Do not disclose it to the public or share it with others and handle it
+with caution.
+
+
+. In Codepaces or in an environment where the repository is cloned, set the connection destination information in [settings.ts] under [src/common].
+
++ 
+|===
+|src/common/settings.ts
+a|
+[source,TypeScript]
+----
+export const SERVICE = {
+  Console: 'console',
+  Azure: 'azure',
+  Local: 'local'
+} as const
+type SERVICE_TYPE = typeof SERVICE[keyof typeof SERVICE];
+
+export const CONNECTION_DESTINATION: SERVICE_TYPE = SERVICE.Console
+export const LOCAL_ROOT = ''
+----
+|===
++ 
+
+* Set the destination to obtain the inference result in `**CONNECTION_DESTINATION**`. +
+The default value is the `**SERVICE.Console**` setting.
+
+* Specify the path for "Local Storage" `**LOCAL_ROOT**`.
+This setting is used when `**SERVICE.Local**` is specified in `**CONNECTION_DESTINATION**`.
+
++ 
+NOTE: When using Dev Container environment, create a folder in the folder where Local Storage is
+git cloned and set `**LOCAL_ROOT**` to `**workspace/{ folder that is created within a git cloned folder}**`.
+
 image::prepare_ts.png[alt="Prepare to run the sample application", width="700", align="center"]
 
 === 2.Launch the sample application
-From the Codespaces terminal, install the package and launch the sample application.
+Install the package and launch the sample application from either the terminal in the environment where the repository is cloned or from Codepaces.
  
 ....
 $ npm install
-$ npm run dev
+$ npm run build
+$ npm run start
 ....
 
 image::launch_app_ts.png[alt="Launch the sample application", width="700", align="center"]
 
 === 3.Start inference
-Start inference by launching sample application in the browser from the Codespaces dialog.
+Access the sample application from the browser and perform various operations.
+
+. Open http://localhost:3000 (port forwarded URL in the case of Codepaces).
 . Select a Device ID from the list of [**DeviceID**]
 . Click the [**START**] to start inference for the edge AI device
 
@@ -268,7 +415,6 @@ Specify the `**config**` to the `**Client**` and generate the `**client**`.
 ----
 const config = new Config(console_endpoint, portal_authorization_endpoint, client_id, client_secret);
 const client = await Client.createInstance(config)
-const queryParams = {}
 const res = await client?.deviceManagement?.getDevices(queryParams)
 ----
 In the preceding example, get information about the enrolled edge AI devices from the "**Console**". + 
@@ -337,13 +483,13 @@ Call the function to get inference results linked to images using the `**ts**`.
 +
 [source, TypeScript]
 ----
-const config = new Config(console_endpoint, portal_authorization_endpoint, client_id, client_secret);
+const config = new Config(console_endpoint, portal_authorization_endpoint, client_id, client_secret, application_id)
 const client = await Client.createInstance(config)
-const filter = undefined
+const filter = `EXISTS(SELECT VALUE i FROM i IN c.Inferences WHERE i.T >= "${startTime}" AND i.T <= "${endTime}")`
 const NumberOfInferenceResults = 1
 const raw = 1
-const time = ts
-const resInference = await client?.insight?.getInferenceResults(deviceId, filter, NumberOfInferenceResults, raw, time)
+const time = undefined
+const resInference = await client.insight.getInferenceResults(deviceId, filter, numberOfInferenceResult, raw, time)
 ----
 Generate the `**client**` as preceding. + 
 Get the list of inference results using the `**getInferenceresults**` provided by the `**insight**`. + 
@@ -362,7 +508,193 @@ The preceding source code converts the inference results gotten from the "**Cons
 See the https://github.com/SonySemiconductorSolutions/aitrios-sdk-deserialization-sample["Cloud SDK Deserialize Sample"] for details of this conversion process.
 
 
-=== 4.Instruct the edge AI devices to stop inference
+=== 4.Obtain the inference results and images of "Azure Blob Storage"
+
+In order to obtain the inference results and images from "Azure Blob Storage", use
+getAzureStorage.ts available in the hooks directory.
+
+* Obtain the image list
++
+[source,TypeScript]
+----
+export async function getImageFromAzure (deviceId: string, subDirectory: string, orderBy?: string, skip?: number, numberOfImages?: number) {
+  const containerClient = getBlobService()
+  const blobNames = []
+  const prefix = `${deviceId}/image/${subDirectory}/`
+  orderBy = orderBy || 'ASC' // ASC is cal default value
+  skip = skip || 0 // 0 is cal default value
+  numberOfImages = numberOfImages || 50 // 50 is cal default value
+  for await (const blob of containerClient.listBlobsFlat({ prefix })) {
+    blobNames.push(blob.name)
+  }
+  if (orderBy === 'DESC') {
+    blobNames.reverse()
+  }
+
+  const images = []
+  for (let i = 0; i < blobNames.length; i++) {
+    if (i === numberOfImages) break
+    if (blobNames[i + skip] === undefined) {
+      break
+    }
+    const blockBlobClient = containerClient.getBlockBlobClient(blobNames[i + skip])
+    const buffer = await blockBlobClient.downloadToBuffer()
+    images.push({
+      name: blobNames[i + skip].split('/')[3],
+      contents: buffer.toString('base64')
+    })
+  }
+
+  const response = {
+    total_image_count: blobNames.length,
+    images
+  }
+  return response
+}
+----
+
+Obtain the list of image file names using `**listBlobsFlat**` provided by `**azure-sdk-for-js**`. +
+Obtain image data by using `**getBlockBlobClient**` and `**downloadToBuffer**` by using `**azure-sdk-for-js**`.  +
+Creates an image file name, base64, and returns it together with `**total_image_count**`
+
+* Obtains the inference result associated with the latest image
++
+[source,TypeScript]
+----
+export async function getInferenceFromAzure (retryCount: number, deviceId: string, subDirectory: string, startInferenceTime?: string, endInferenceTime?: string, numberOfInferenceResult?: number): Promise<string[]> {
+  const serializeDatas: string[] = []
+  if (retryCount === 0) {
+    return serializeDatas
+  }
+  const containerClient = getBlobService()
+  const blobs = []
+  numberOfInferenceResult = numberOfInferenceResult || 20 // 20 is cal default value
+  const prefix = `${deviceId}/metadata/${subDirectory}/`
+
+  for await (const blob of containerClient.listBlobsByHierarchy('/', { prefix })) {
+    const filePath = blob.name
+    const timestamp = filePath.split('/')[3].replace('.txt', '')
+    if ((startInferenceTime === undefined || timestamp >= startInferenceTime) &&
+      (endInferenceTime === undefined || timestamp < endInferenceTime)) {
+      blobs.push(blob.name)
+    } else if (endInferenceTime !== undefined && timestamp > endInferenceTime) {
+      break
+    }
+    if (blobs.length === numberOfInferenceResult) break
+  }
+
+  if (!(blobs.length === 0)) {
+    for (let i = 0; i < blobs.length; i++) {
+      const blobClient = containerClient.getBlobClient(blobs[i])
+      const blobInferenceResponse = await blobClient.download(0)
+      const inferenceText = await streamToString(blobInferenceResponse.readableStreamBody)
+      const inferenceJson = JSON.parse(inferenceText)
+      serializeDatas.push(inferenceJson)
+    }
+    return serializeDatas
+  } else {
+    await setTimeout(1000)
+    return getInferenceFromAzure(retryCount - 1, deviceId, subDirectory, startInferenceTime, endInferenceTime, numberOfInferenceResult)
+  }
+}
+----
+
+Obtains the list of inference result file names using `**listBlobsByHierarchy**` provided by `**azure-sdk-for-js**`. +
+Check whether the time stamp of the obtained inference result file name is within the specified
+range. +
+Obtain the inference result data using `**getBlobClient**` or `**download**` provided by `**azure-sdk-for-js**`. +
+`**startInferenceTime**` is a time stamp that indicates the search start position. +
+`**endInferenceTime**` is a time stamp that indicates the search end position. +
+`**numberOfInferenceResult**` is the number of inference results to be obtained. 
+
+=== 5.Obtains the inference results and images of "Local Storage"
+In order to obtain the inference results and images from "Local Storage", use LocalStorage.ts
+available in the hooks directory.
+
+* Obtain the image list
++
+[source,TypeScript]
+----
+export function getImageFromLocal (deviceId: string, subDirectory: string, orderBy?: string, skip?: number, numberOfImages?: number) {
+  const storagePath = path.join(LOCAL_ROOT, deviceId, 'image', subDirectory)
+  isRelativePath(storagePath)
+  orderBy = orderBy || 'ASC' // ASC is cal default value
+  skip = skip || 0 // 0 is cal default value
+  numberOfImages = numberOfImages || 50 // 50 is cal default value
+  const images: any = []
+  isStoragePathFile(storagePath)
+  const files = fs.readdirSync(storagePath)
+  const imagesFiles = files.filter(file => {
+    const extension = path.extname(file).toLowerCase()
+    return extension === '.jpg'
+  })
+  if (orderBy === 'DESC') {
+    imagesFiles.reverse()
+  }
+  for (let i = 0; i < numberOfImages; i++) {
+    if (imagesFiles[i + skip] === undefined) {
+      break
+    }
+    const filePath = path.join(storagePath, imagesFiles[i + skip])
+    isRelativePath(filePath)
+    isSymbolicLinkFile(filePath)
+    const data = fs.readFileSync(filePath)
+    const base64Image = base64.fromByteArray(data)
+    images.push({
+      name: imagesFiles[i + skip],
+      contents: base64Image
+    })
+  }
+  const response = {
+    total_image_count: imagesFiles.length,
+    images
+  }
+  return response
+}
+----
+
+Obtains the list of image file names using `**readdirSync**` provided by `**fs**`. +
+Obtains the image data using `**readFileSync**` provided by `**fs**`. +
+Creates an image file name, base64, and returns it together with `**total_image_count**`. +
+
+* Obtains the inference result associated with the latest image +
++
+[source,TypeScript] 
+----
+export function getInferenceFromLocal (deviceId: string, subDirectory: string, startInferenceTime?: string, endInferenceTime?: string, numberOfInferenceResult?: number) {
+  const storagePath = path.join(LOCAL_ROOT, deviceId, 'meta', subDirectory)
+  isRelativePath(storagePath)
+  numberOfInferenceResult = numberOfInferenceResult || 20 // 20 is cal default value
+  isStoragePathFile(storagePath)
+  const serializeDatas: string[] = []
+  const inferencesFiles = fs.readdirSync(storagePath) // get inferences
+  for (const fileName of inferencesFiles) {
+    const timestamp = path.basename(fileName, '.txt')
+    if ((startInferenceTime === undefined || timestamp >= startInferenceTime) &&
+      (endInferenceTime === undefined || timestamp < endInferenceTime)) {
+      const inferenceFilePath = path.join(LOCAL_ROOT, deviceId, 'meta', subDirectory, fileName)
+      isSymbolicLinkFile(inferenceFilePath)
+      const inferenceData = fs.readFileSync(inferenceFilePath, 'utf8')
+      const json = JSON.parse(inferenceData)
+      serializeDatas.push(json)
+    } else if (endInferenceTime !== undefined && timestamp > endInferenceTime) {
+      break
+    }
+    if (serializeDatas.length === numberOfInferenceResult) break
+  }
+
+  return serializeDatas
+}
+----
+
+Obtains the list of inference result file names using `**readdirSync**` provided by `**fs**`. +
+Check whether the time stamp of the obtained inference result file name is within the specified range. +
+Obtains the inference result data using `**readFileSync**` provided by `**fs**`. +
+`**startInferenceTime**` is a time stamp that indicates the search start position. +
+`**endInferenceTime**` is a time stamp that indicates the search end position. +
+`**numberOfInferenceResult**` is the number of inference results to be obtained.
+
+=== 6.Instruct the edge AI devices to stop inference
 
 * Stop inference
 +

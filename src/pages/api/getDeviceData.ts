@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Sony Semiconductor Solutions Corp. All rights reserved.
+ * Copyright 2022, 2023 Sony Semiconductor Solutions Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,24 +14,18 @@
  * limitations under the License.
  */
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { Client, Config } from 'consoleAccessLibrary'
-import { getConsoleAccessLibrarySettings, ConsoleAccessLibrarySettings } from '../../common/config'
+import { getConsoleService } from '../../hooks/getConsoleStorage'
 
 const getDevices = async () => {
-  const connectionInfo: ConsoleAccessLibrarySettings = getConsoleAccessLibrarySettings()
-  let config:Config
-  try {
-    config = new Config(connectionInfo.consoleEndpoint, connectionInfo.portalAuthorizationEndpoint, connectionInfo.clientId, connectionInfo.clientSecret)
-  } catch {
-    throw new Error('Unable to create instance.')
+  const calClient = await getConsoleService()
+  const response = await calClient.deviceManagement.getDevices()
+  if (typeof response.result !== 'undefined' && response.result === 'ERROR') {
+    throw new Error(response.message)
   }
-  const client = await Client.createInstance(config)
-  if (!client) {
-    throw new Error('Unable to create instance.')
+  if (typeof response.data.result !== 'undefined' && response.data.result === 'WARNING') {
+    throw new Error(response.data.message)
   }
-
-  const res = await client.deviceManagement?.getDevices()
-  return res.data
+  return response.data
 }
 
 export default async function handler (req: NextApiRequest, res: NextApiResponse) {
@@ -39,6 +33,7 @@ export default async function handler (req: NextApiRequest, res: NextApiResponse
     res.status(405).json({ message: 'Only GET requests.' })
     return
   }
+
   await getDevices()
     .then(result => {
       const deviceList = []
@@ -48,10 +43,6 @@ export default async function handler (req: NextApiRequest, res: NextApiResponse
       const deviceData = { deviceId: deviceList }
       res.status(200).json(deviceData)
     }).catch(err => {
-      if (err.response) {
-        res.status(500).json({ message: err.response.data.message })
-      } else {
-        res.status(500).json({ message: err.message })
-      }
+      res.status(500).json(err.message)
     })
 }

@@ -38,6 +38,7 @@ export default function Home () {
   const [outputSubDirctory, setOutputSubDirctory] = useState('')
   const [labels, setLabels] = useState([])
   const [context, setContext] = useState(null)
+  const [deviceIdListDisableFlg, setDeviceIdListDisableFlg] = useState(false)
   const [startBtnFlg, setStartBtnFlg] = useState(true)
   const [stopBtnFlg, setStopBtnFlg] = useState(false)
   const [isPolling, setIsPolling] = useState<boolean>(false)
@@ -77,15 +78,15 @@ export default function Home () {
 
         <div className={styles.grid}>
           <div className={styles.paramsArea}>
-          <h2 id='param-lbl' className={styles.title}>Parameter</h2>
+            <h2 id='param-lbl' className={styles.title}>Parameter</h2>
             <div className={styles.param}>
               <label id='device-id-lbl'><b>DeviceID</b></label>
-              <DropDownList id={'device-id-list'} name={'deviceId'} className={styles.select} datas={deviceData} onChange={(event) => { handleOnChangeDeviceId(event, setStopBtnFlg, setSelectedDeviceId, deviceData, setVisibility) }}/>
+              <DropDownList id={'device-id-list'} name={'deviceId'} className={styles.select} datas={deviceData} disabled={deviceIdListDisableFlg} onChange={(event) => { handleOnChangeDeviceId(event, setStopBtnFlg, setSelectedDeviceId, deviceData, setVisibility) }} />
             </div>
 
             <div className={visibility ? styles.buttonArea : `${styles.hidden} ${styles.buttonArea}`}>
-              <Button id={'start-btn'} disabled={!startBtnFlg} className={!startBtnFlg ? `${styles.startButton} ${styles.disableButton}` : `${styles.startButton} ${styles.button}`} onClick={() => { handleOnClickStartBtn(selectedDeviceId, setStartBtnFlg, setStopBtnFlg, setOutputSubDirctory, setIsPolling, handleResponseErr) }} btnTxt={'START'}></Button>
-              <Button id={'stop-btn'} disabled={!stopBtnFlg} className={!stopBtnFlg ? styles.disableButton : styles.button} onClick={() => { handleOnClickStopBtn(selectedDeviceId, setIsPolling, setStartBtnFlg, setStopBtnFlg, handleResponseErr) }} btnTxt={'STOP'}></Button>
+              <Button id={'start-btn'} disabled={!startBtnFlg} className={!startBtnFlg ? `${styles.startButton} ${styles.disableButton}` : `${styles.startButton} ${styles.button}`} onClick={() => { handleOnClickStartBtn(selectedDeviceId, setDeviceIdListDisableFlg, setStartBtnFlg, setStopBtnFlg, setOutputSubDirctory, setIsPolling, handleResponseErr) }} btnTxt={'START'}></Button>
+              <Button id={'stop-btn'} disabled={!stopBtnFlg} className={!stopBtnFlg ? styles.disableButton : styles.button} onClick={() => { handleOnClickStopBtn(selectedDeviceId, outputSubDirctory, setIsPolling, setDeviceIdListDisableFlg, setStartBtnFlg, setStopBtnFlg, handleResponseErr) }} btnTxt={'STOP'}></Button>
             </div>
           </div>
 

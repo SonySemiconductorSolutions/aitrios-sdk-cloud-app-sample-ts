@@ -1,6 +1,6 @@
-# [Choice] Python version (use -bullseye variants on local arm64/Apple Silicon): 3, 3.10, 3.9, 3.8, 3.7, 3.6, 3-bullseye, 3.10-bullseye, 3.9-bullseye, 3.8-bullseye, 3.7-bullseye, 3.6-bullseye, 3-buster, 3.10-buster, 3.9-buster, 3.8-buster, 3.7-buster, 3.6-buster
-ARG VARIANT=16-bullseye
-FROM mcr.microsoft.com/vscode/devcontainers/typescript-node:${VARIANT}
+# choice https://github.com/devcontainers/images/tree/main/src/typescript-node
+ARG VARIANT=18-bullseye
+FROM mcr.microsoft.com/devcontainers/typescript-node:${VARIANT}
 RUN apt-get update && apt-get install -y \
     linux-libc-dev \
     libncurses-dev \
@@ -11,6 +11,20 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     libx11-6 \
     libx11-data \
+    libwebp-dev \
+    libc-bin \
+    libc-l10n \
+    libc6 \
+    locales \
+    curl \
+    libcurl3-gnutls \
+    libkrb5-dev \
+    libkdb5-10 \
+    libmariadb-dev \
+    libssl-dev \
+    mariadb-common \
+    openssh-client \
+    openssl \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 RUN npm uninstall -g pnpm
