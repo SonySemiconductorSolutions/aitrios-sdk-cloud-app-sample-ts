@@ -36,12 +36,10 @@ export const getImageAndInference = (setContext, selectedDeviceId, outputSubDirc
       if (Object.keys(response.data).length === 0) {
         return console.log('Waiting for image upload.')
       }
-
       const inferenceData = response.data.imageAndInference.inferenceData
       const deserializedInferenceData = deserialize(inferenceData)
       drawBoundingBox(response.data.imageAndInference.image, deserializedInferenceData.Inferences[0], context, labels)
     })
-
     .catch(err => {
       handleResponseErr(err)
     })
@@ -135,8 +133,9 @@ export const handleOnChangeDeviceId = (event, stopBtnFlg, setSelectedDeviceId, d
   setVisibility(true)
 }
 
-export const handleOnClickStartBtn = (selectedDeviceId, setStartBtnFlg, setStopBtnFlg, setOutputSubDirctory, setIsPolling, handleResponseErr) => {
+export const handleOnClickStartBtn = (selectedDeviceId, setDeviceIdListDisableFlg, setStartBtnFlg, setStopBtnFlg, setOutputSubDirctory, setIsPolling, handleResponseErr) => {
   setStartBtnFlg(false)
+  setDeviceIdListDisableFlg(true)
   const body = {
     deviceId: selectedDeviceId
   }
@@ -147,16 +146,21 @@ export const handleOnClickStartBtn = (selectedDeviceId, setStartBtnFlg, setStopB
     }
   })
     .then(response => {
-      console.log(response)
+      console.log(`getCommandParameterFile response: ${JSON.stringify(response)}`)
       if (!response.data) {
         setStartBtnFlg(true)
+        setDeviceIdListDisableFlg(false)
         return window.alert('Command param not found.')
-      } else if (response.data.Mode !== 1) {
+      } else if (response.data.mode !== 1) {
         setStartBtnFlg(true)
+        setDeviceIdListDisableFlg(false)
         return window.alert('Set CommandParameter Mode to 1(Image&Inference Result)')
-      } else if (response.data.UploadMethodIR.toUpperCase() !== 'MQTT') {
+      } else if (response.data.uploadMethodIR.toUpperCase() !== 'MQTT' &&
+        response.data.uploadMethodIR !== 'BlobStorage' &&
+        response.data.uploadMethodIR !== 'HTTPStorage') {
         setStartBtnFlg(true)
-        return window.alert('Set CommandParameter Mode to "Mqtt".')
+        setDeviceIdListDisableFlg(false)
+        return window.alert('Set CommandParameter Mode to "Mqtt" or "BlobStorage" or "HTTPStorage".')
       }
 
       axios.post('/api/startUpload', body)
@@ -170,28 +174,33 @@ export const handleOnClickStartBtn = (selectedDeviceId, setStartBtnFlg, setStopB
             setIsPolling(true)
           } else if (response.data.result === 'ERROR') {
             setStartBtnFlg(true)
+            setDeviceIdListDisableFlg(false)
             window.alert('startUpload : ERROR')
           }
         })
         .catch(err => {
           setStartBtnFlg(true)
+          setDeviceIdListDisableFlg(false)
           handleResponseErr(err)
         })
     })
     .catch(err => {
       setStartBtnFlg(true)
+      setDeviceIdListDisableFlg(false)
       handleResponseErr(err)
     })
 }
 
-export const handleOnClickStopBtn = (selectedDeviceId, setIsPolling, setStartBtnFlg, setStopBtnFlg, handleResponseErr) => {
+export const handleOnClickStopBtn = (selectedDeviceId, outputSubDirctory, setIsPolling, setDeviceIdListDisableFlg, setStartBtnFlg, setStopBtnFlg, handleResponseErr) => {
   setStopBtnFlg(false)
   const body = {
-    deviceId: selectedDeviceId
+    deviceId: selectedDeviceId,
+    subDirectory: outputSubDirctory
   }
   axios.post('/api/stopUpload', body)
     .then(response => {
       setStartBtnFlg(true)
+      setDeviceIdListDisableFlg(false)
       console.log(response)
       setIsPolling(false)
     })
@@ -205,7 +214,9 @@ export const handleOnClickStopBtn = (selectedDeviceId, setIsPolling, setStartBtn
 export const handleResponseErr = (err) => {
   if (err.code === 'ECONNABORTED' || err.code === 'ERR_NETWORK') {
     window.alert('Communication with server failed.')
-  } else if (err.response.data) {
+  } else if (err.response.data && err.response.data.message) {
     window.alert(err.response.data.message)
+  } else if (err.response.data && !err.response.data.message) {
+    window.alert(err.response.data)
   }
 }

@@ -16,7 +16,7 @@
 import React from 'react'
 export default function DropDownList (props) {
   return (
-    <select defaultValue={''} id={props.id} name={props.name} className={props.className} onChange={(e) => props.onChange(e)}>
+    <select defaultValue={''} id={props.id} name={props.name} className={props.className} disabled={props.disabled} onChange={(e) => props.onChange(e)}>
       <option value='' disabled></option>
       {Array.isArray(props.datas) && (
         props.datas.map((data, index) => {
