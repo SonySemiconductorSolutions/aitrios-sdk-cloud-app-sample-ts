@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Sony Semiconductor Solutions Corp. All rights reserved.
+ * Copyright 2022, 2023 Sony Semiconductor Solutions Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,45 +14,32 @@
  * limitations under the License.
  */
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { Client, Config } from 'consoleAccessLibrary'
-import { getConsoleAccessLibrarySettings, ConsoleAccessLibrarySettings } from '../../common/config'
+import { CONNECTION_DESTINATION, SERVICE } from '../../common/settings'
+import { getConsoleService } from '../../hooks/getConsoleStorage'
 
 const getCommandParameterFile = async (deviceId: string) => {
-  const connectionInfo: ConsoleAccessLibrarySettings = getConsoleAccessLibrarySettings()
-  let config:Config
-  try {
-    config = new Config(connectionInfo.consoleEndpoint, connectionInfo.portalAuthorizationEndpoint, connectionInfo.clientId, connectionInfo.clientSecret)
-  } catch {
-    throw new Error('Unable to create instance.')
+  const calClient = await getConsoleService()
+  const response = await calClient.deviceManagement.getCommandParameterFile()
+  if (typeof response.result !== 'undefined' && response.result === 'ERROR') {
+    throw new Error(response.message)
   }
-  const client = await Client.createInstance(config)
-  if (!client) {
-    throw new Error('Unable to create instance.')
+  if (typeof response.data.result !== 'undefined' && response.data.result === 'WARNING') {
+    throw new Error(response.data.message)
   }
-
-  const response = await client.deviceManagement?.getCommandParameterFile()
-
   const matchData = response.data.parameter_list.filter(function (value: any) {
     return value.device_ids.indexOf(deviceId) !== -1
   })
 
-  let mode
-  let uploadMethodIR
+  const mode = 'Mode' in matchData[0].parameter.commands[0].parameters ? matchData[0].parameter.commands[0].parameters.Mode : 0
+  const uploadMethodIR = 'UploadMethodIR' in matchData[0].parameter.commands[0].parameters ? matchData[0].parameter.commands[0].parameters.UploadMethodIR : 'MQTT'
 
-  if ('Mode' in matchData[0].parameter.commands[0].parameters) {
-    mode = matchData[0].parameter.commands[0].parameters.Mode
-  } else {
-    mode = 0
+  if (!((uploadMethodIR === 'MQTT' && CONNECTION_DESTINATION === SERVICE.Console) ||
+      (uploadMethodIR === 'BlobStorage' && CONNECTION_DESTINATION === SERVICE.Azure) ||
+      (uploadMethodIR === 'HTTPStorage' && CONNECTION_DESTINATION === SERVICE.Local))) {
+    throw new Error('Command parameters and CONNECTION_DESTINATION do not match.')
   }
 
-  if ('UploadMethodIR' in matchData[0].parameter.commands[0].parameters) {
-    uploadMethodIR = matchData[0].parameter.commands[0].parameters.UploadMethodIR
-  } else {
-    uploadMethodIR = 'MQTT'
-  }
-
-  const result = { Mode: mode, UploadMethodIR: uploadMethodIR }
-
+  const result = { mode, uploadMethodIR }
   return result
 }
 
@@ -67,10 +54,6 @@ export default async function handler (req: NextApiRequest, res: NextApiResponse
     .then(result => {
       res.status(200).json(result)
     }).catch(err => {
-      if (err.response) {
-        res.status(500).json({ message: err.response.data.message })
-      } else {
-        res.status(500).json({ message: err.message })
-      }
+      res.status(500).json(err.message)
     })
 }
