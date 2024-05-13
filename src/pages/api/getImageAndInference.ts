@@ -28,7 +28,7 @@ const getImageAndInference = async (deviceId: string, outputSubDir: string) => {
   const orderBy = 'DESC'
   const numberOfImages = 1
   const skip = 0
-  const errorMsgImage = 'Cannot get images.'
+  const errorMsgImage = 'Cannot get JPG images.'
   const imageData = await getImage(deviceId, outputSubDir, orderBy, skip, numberOfImages)
   try {
     if (!imageData || imageData.images.length === 0) {

@@ -25,6 +25,14 @@ RUN apt-get update && apt-get install -y \
     mariadb-common \
     openssh-client \
     openssl \
+    bsdextrautils \
+    bsdutils \
+    libblkid-dev \
+    libmount-dev \
+    libsmartcols1 \
+    uuid-dev \
+    util-linux \
+    mount \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 RUN npm uninstall -g pnpm
