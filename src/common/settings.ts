@@ -17,6 +17,7 @@
 export const SERVICE = {
   Console: 'console',
   Azure: 'azure',
+  AWS: 'aws',
   Local: 'local'
 } as const
 type SERVICE_TYPE = typeof SERVICE[keyof typeof SERVICE]

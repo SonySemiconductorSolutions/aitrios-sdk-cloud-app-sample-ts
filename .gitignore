@@ -31,6 +31,7 @@ yarn-error.log*
 .env.production.local
 src/common/console_access_settings.yaml
 src/common/azure_access_settings.yaml
+src/common/aws_access_settings.yaml
 
 # vercel
 .vercel

@@ -11,6 +11,7 @@
 :toclevels: 1
 :chapter-label:
 :lang: ja
+:imagesdir: ./images/
 
 == 更新履歴
 
@@ -40,14 +41,16 @@ PDFビルド環境更新 +
 |2023/12/22
 |Console Developer EditionとConsole Enterprise Edition対応
 
+|2024/3/25
+|AWS対応
 |===
 
 
 == はじめに
 このチュートリアルでは、「**Cloud SDK**」を用いたサンプルアプリケーションについて解説します。 +
 このサンプルアプリケーションは、「**Cloud SDK**」の基本的な使い方を体験して頂くために用意しています。 +
-サンプルアプリケーションでは、「**Cloud SDK**」を利用してエッジAIデバイスを制御する方法と、「**Console for AITRIOS**」 (以下、「**Console**」と記載)もしくは「Azure Blob Storage」もしくは「Local Storage」UploadされたエッジAIデバイスの出力を確認する方法を確認できます。 +
-ただし、「Local Storage」へアップロードされた推論結果を確認する場合、Codespacesは利用できません。
+サンプルアプリケーションでは、「**Cloud SDK**」を利用してエッジデバイスを制御する方法と、「**Console for AITRIOS**」 (以下、「**Console**」と記載)もしくはAzure Blob StorageもしくはAmazon S3もしくはLocal StorageへUploadされたエッジデバイスの出力を確認する方法を確認できます。 +
+ただし、Local Storageへアップロードされた推論結果を確認する場合、Codespacesは利用できません。
 
 [#_precondition]
 == 前提条件
@@ -59,11 +62,11 @@ PDFビルド環境更新 +
 * クライアントアプリケーション詳細情報
 - 「**Console Developer Edition**」を使用している場合
 ** 「**Portal for AITRIOS**」のクライアントアプリケーション一覧から参照または、必要に応じてサンプルアプリケーション向けのクライアントアプリケーション登録を行い、下記情報の取得を行ってください。
-詳細は、 https://developer.aitrios.sony-semicon.com/documents/portal-user-manual[「**Portalユーザーマニュアル**」] の「SDK用のClient Secretを発行する」をお読みください。
+詳細は、 https://developer.aitrios.sony-semicon.com/edge-ai-sensing/documents/portal-user-manual/[「**Portalユーザーマニュアル**」] の「SDK用のClient Secretを発行する」をお読みください。
 *** クライアントID
 *** シークレット
 +
-** https://developer.aitrios.sony-semicon.com/file/download/rest-api-authentication[こちらのドキュメント] から下記の情報を取得してください。
+** https://developer.aitrios.sony-semicon.com/file/download/edge-ai-sensing-portal-console-end-point-info/[「**PortalおよびConsoleのエンドポイント情報**」] から下記の情報を取得してください。
 *** コンソールエンドポイント
 *** ポータル認証エンドポイント
 
@@ -71,11 +74,24 @@ PDFビルド環境更新 +
 ** 「**Console**」の導入担当者(Service Administrator)に問い合わせください。
 
 
-「Azure Blob Storage」を使用するには、「Azure Blob Storage」へアクセスするための接続情報が必要になります。
+- Azure Blob Storageを使用するには、Azure Blob Storageへアクセスするための接続情報が必要になります。
 詳細は、 https://learn.microsoft.com/en-us/azure/storage/common/storage-configure-connection-string#configure-a-connection-string-for-an-azure-storage-account[ 「**Configure a connection string for an Azure storage account**」 ]をお読みください。
 
-=== エッジAIデバイス
-サンプルアプリケーションを正常に動作させるためには、利用するエッジAIデバイスに特定の設定が必要になります。 +
+- Amazon S3を使用するには、Amazon S3へアクセスするための接続情報が必要になります。
+** https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html#Using_CreateAccessKey[「**AWS Identity and Access Management**」]を参考に下記の情報を取得してください。
+*** アクセスキーID
+*** シークレットアクセスキー
++
+NOTE: 外部転送設定やアプリケーションで使用するAccessKeyの取得には、MFA設定なしのアカウントを使用してください。
+
+** https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html[「**User Guide for Linux Instances**」] を参考に下記の情報を取得してください。
+*** リージョン
+
+** https://docs.aws.amazon.com/AmazonS3/latest/userguide/create-bucket-overview.html[「**Amazon Simple Storage Service (S3)**」] を参考にバケットを作成し、下記の情報を取得してください。
+*** バケット名
+
+=== エッジデバイス
+サンプルアプリケーションを正常に動作させるためには、利用するエッジデバイスに特定の設定が必要になります。 +
 必要な設定内容は下記の通りです。
 
 * AIモデルやアプリケーションがデプロイされていること
@@ -85,37 +101,44 @@ PDFビルド環境更新 +
 記述しなかった場合は以下の値が自動で設定されます。 +
 UploadMethod="BlobStorage" +
 UploadMethodIR="Mqtt"
-** 「Azure Blob Storage」 +
+** Azure Blob Storage/Amazon S3 利用時 +
 UploadMethod="BlobStorage" +
 UploadMethodIR="BlobStorage"
-** 「Local Storage」 +
+** Local Storage 利用時 +
 UploadMethod="HTTPStorage" +
 UploadMethodIR="HTTPStorage" 
++
+** 全アップロード先共通 +
+NumberOfInferencesPerMessage=1 +
+FileFormat="JPG" +
+Mode=1
 +
 ** AIモデルやアプリケーションの内容に応じて、その他のパラメータも変更する必要がある
 
 === 外部転送設定
-* 「Azure Blob Storage」利用時 +
-「Azure Blob Storage」を使用する場合は、 https://developer.aitrios.sony-semicon.com/edge-ai-sensing/documents/external-transfer-settings-tutorial-for-azure-blob-storage[外部転送設定チュートリアル(Azure Blob Storage)]の設定を完了させてください。
-* 「Local Storage」利用時 +
-「Local Storage」を使用する場合は、 https://developer.aitrios.sony-semicon.com/edge-ai-sensing/documents/external-transfer-settings-tutorial-for-http-server[外部転送設定チュートリアル(Local HTTP Server)]の設定を完了させてください。
+* Azure Blob Storage 利用時 +
+Azure Blob Storageを使用する場合は、外部転送設定チュートリアル(Azure Blob Storage)の設定を完了させてください。
+* Amazon S3 利用時 +
+Amazon S3を使用する場合は、外部転送設定チュートリアル(Amazon S3)の設定を完了させてください。
+* Local Storage 利用時 +
+Local Storageを使用する場合は、外部転送設定チュートリアル(Local HTTP Server)の設定を完了させてください。
 +
-IMPORTANT: デバイスからHTTP ServerへのアップロードはHTTP通信のため暗号化されません。
+IMPORTANT: エッジデバイスからHTTP ServerへのアップロードはHTTP通信のため暗号化されません。
 
 == サンプルアプリケーション動作環境
-https://developer.aitrios.sony-semicon.com/downloads#sdk-getting-started[「**SDK スタートガイド**」]を参照してください。
+https://developer.aitrios.sony-semicon.com/edge-ai-sensing/documents/sdk-getting-started/[「**SDK スタートガイド**」]を参照してください。
 
 == サンプルアプリケーション機能概要
-サンプルアプリケーションでは、「**Console**」に登録されたエッジAIデバイスを指定し、アプリケーションが推論結果と画像を取得するために必要な機能を実装しています。 +
+サンプルアプリケーションでは、「**Console**」に登録されたエッジデバイスを指定し、アプリケーションが推論結果と画像を取得するために必要な機能を実装しています。 +
 実装されている機能は下記の三点です。
 
-* 「**Console**」に登録されたエッジAIデバイスの情報取得
-* エッジAIデバイスへの推論開始・停止指示
+* 「**Console**」に登録されたエッジデバイスの情報取得
+* エッジデバイスへの推論開始・停止指示
 +
-推論開始を行うことによって、エッジAIデバイスは推論結果・画像を「**Console**」もしくは「Azure Blob Storage」もしくは「Local Storage」へUploadします。
+推論開始を行うことによって、エッジデバイスは推論結果・画像を「**Console**」もしくはAzure Blob StorageもしくはAmazon S3もしくはLocal StorageへUploadします。
 * 推論結果・画像の取得、取得結果の表示
 +
-「**Console**」もしくは「Azure Blob Storage」もしくは「Local Storage」にアップロードされたデータを表示します。
+「**Console**」もしくはAzure Blob StorageもしくはAmazon S3もしくはLocal Storageにアップロードされたデータを表示します。
 
 
 == サンプルアプリケーションリポジトリ構成
@@ -133,67 +156,69 @@ aitrios-sdk-cloud-app-sample-ts
 │   │   └── DropDownList
 │   │       └── index.tsx
 │   ├── hooks
-│   │   └── getAzureStorage.ts (5)
-│   │   └── getConsoleStorage.ts (6)
-│   │   └── getLocalStorage.ts (7)
-│   │   └── getStorageData.ts (8)
-│   │   └── useInterval.js (9)
+│   │   └── getAwsStorage.ts (5)
+│   │   └── getAzureStorage.ts (6)
+│   │   └── getConsoleStorage.ts (7)
+│   │   └── getLocalStorage.ts (8)
+│   │   └── getStorageData.ts (9)
+│   │   └── useInterval.js (10)
 │   ├── next-env.d.ts
 │   ├── pages
 │   │   ├── api
-│   │   │   ├── getCommandParameterFile.ts (10)
-│   │   │   ├── getDeviceData.ts (11)
-│   │   │   ├── getImageAndInference.ts (12)
-│   │   │   ├── startUpload.ts (13)
-│   │   │   └── stopUpload.ts (14)
-│   │   ├── _app.tsx (15)
-│   │   └── index.tsx (16)
+│   │   │   ├── getCommandParameterFile.ts (11)
+│   │   │   ├── getDeviceData.ts (12)
+│   │   │   ├── getImageAndInference.ts (13)
+│   │   │   ├── startUpload.ts (14)
+│   │   │   └── stopUpload.ts (15)
+│   │   ├── _app.tsx (16)
+│   │   └── index.tsx (17)
 │   ├── public
-│   │   ├── favicon.ico (17)
-│   │   └── label.json (18)
+│   │   ├── favicon.ico (18)
+│   │   └── label.json (19)
 │   ├── styles
-│   │   ├── globals.css (19)
-│   │   └── Home.module.css (20)
-│   ├── tsconfig.json (21)
+│   │   ├── globals.css (20)
+│   │   └── Home.module.css (21)
+│   ├── tsconfig.json (22)
 │   └── util
-│   │   ├── bounding-box.ts (22)
-│   │   ├── bounding-box2d.ts (23)
-│   │   ├── general-object.ts (24)
-│   │   ├── object-detection-data.ts (25)
-│   │   ├── object-detection-top.ts (26)
-│   │   └── sample.ts (27)
-│   └── checkLocalRoot.ts (28)
-│   └── tsconfig.node.json  (29)
+│   │   ├── bounding-box.ts (23)
+│   │   ├── bounding-box2d.ts (24)
+│   │   ├── general-object.ts (25)
+│   │   ├── object-detection-data.ts (26)
+│   │   ├── object-detection-top.ts (27)
+│   │   └── sample.ts (28)
+│   └── checkLocalRoot.ts (29)
+│   └── tsconfig.node.json  (30)
 ----
 (1) src: サンプルアプリケーション格納フォルダ +
-(2) config.ts : 「**Console**」もしくは「Azure Blob Storage」への接続情報取得ロジック +
-(3) settings.ts : 接続先と「Local Storage」のパス指定を行う +
+(2) config.ts : 「**Console**」もしくはAzure Blob Storage、Amazon S3への接続情報取得ロジック +
+(3) settings.ts : 接続先とLocal Storageのパス指定を行う +
 (4) components : Button / DropDownListコンポーネントロジック格納フォルダ +
-(5) getAzureStorage.ts : 「Azure Blob Storage」から推論結果や画像を取得するロジック +
-(6) getConsoleStorage.ts : 「**Console**」から推論結果や画像を取得するロジック +
-(7) getLocalStorage.ts : 「Local Storage」から推論結果や画像を取得するロジック +
-(8) getStorageData.ts : 利用するStorageを判定し該当Storageのロジックを呼び出す +
-(9) useInterval.js : インターバルロジック +
-(10) getCommandParameterFile.ts : エッジAIデバイスのパラメータ取得ロジック +
-(11) getDeviceData.ts : 「**Console**」に登録されたエッジAIデバイスの情報取得ロジック +
-(12) getImageAndInference.ts : 推論結果と画像を取得するロジック +
-(13) startUpload.ts : 推論開始ロジック +
-(14) stopUpload.ts : 推論停止ロジック +
-(15) _app.tsx : サンプルアプリケーションのフロントエンド初期化 +
-(16) index.tsx : サンプルアプリケーションのフロントエンドUI +
-(17) favicon.ico : サンプルアプリケーションのシンボルアイコン +
-(18) label.json : 推論結果の表示ラベル +
-(19) globals.css : サンプルアプリケーションのフロントエンドスタイルシート +
-(20) Home.module.css : サンプルアプリケーションのフロントエンドスタイルシート +
-(21) tsconfig.json : コンパイラ設定ファイル +
-(22) bounding-box.ts : Deserialize用ソースコード +
-(23) bounding-box2d.ts : Deserialize用ソースコード +
-(24) general-object.ts : Deserialize用ソースコード +
-(25) object-detection-data.ts : Deserialize用ソースコード +
-(26) object-detection-top.ts : Deserialize用ソースコード +
-(27) sample.ts : サンプルアプリケーションのフロントエンドUIで動作するTypeScriptロジック +
-(28) checkLocalRoot.ts : LOCAL_ROOTの設定値を確認する +
-(29) tsconfig.node.json : コンパイラ設定ファイル
+(5) getAwsStorage.ts : Amazon S3から推論結果や画像を取得するロジック +
+(6) getAzureStorage.ts : Azure Blob Storageから推論結果や画像を取得するロジック +
+(7) getConsoleStorage.ts : 「**Console**」から推論結果や画像を取得するロジック +
+(8) getLocalStorage.ts : Local Storageから推論結果や画像を取得するロジック +
+(9) getStorageData.ts : 利用するStorageを判定し該当Storageのロジックを呼び出す +
+(10) useInterval.js : インターバルロジック +
+(11) getCommandParameterFile.ts : エッジデバイスのパラメータ取得ロジック +
+(12) getDeviceData.ts : 「**Console**」に登録されたエッジデバイスの情報取得ロジック +
+(13) getImageAndInference.ts : 推論結果と画像を取得するロジック +
+(14) startUpload.ts : 推論開始ロジック +
+(15) stopUpload.ts : 推論停止ロジック +
+(16) _app.tsx : サンプルアプリケーションのフロントエンド初期化 +
+(17) index.tsx : サンプルアプリケーションのフロントエンドUI +
+(18) favicon.ico : サンプルアプリケーションのシンボルアイコン +
+(19) label.json : 推論結果の表示ラベル +
+(20) globals.css : サンプルアプリケーションのフロントエンドスタイルシート +
+(21) Home.module.css : サンプルアプリケーションのフロントエンドスタイルシート +
+(22) tsconfig.json : コンパイラ設定ファイル +
+(23) bounding-box.ts : Deserialize用ソースコード +
+(24) bounding-box2d.ts : Deserialize用ソースコード +
+(25) general-object.ts : Deserialize用ソースコード +
+(26) object-detection-data.ts : Deserialize用ソースコード +
+(27) object-detection-top.ts : Deserialize用ソースコード +
+(28) sample.ts : サンプルアプリケーションのフロントエンドUIで動作するTypeScriptロジック +
+(29) checkLocalRoot.ts : LOCAL_ROOTの設定値を確認する +
+(30) tsconfig.node.json : コンパイラ設定ファイル
 
 === ソースコードの解説
 
@@ -203,9 +228,9 @@ image::diagram_ts.png[alt="サンプルアプリケーションの概要",width=
 
 サンプルアプリケーションはNext.jsフレームワークで構成しています。
 
-サンプルアプリケーションから「**Cloud SDK**」を呼び出し、「**Console**」を経由してエッジAIデバイスを制御します。 +
-エッジAIデバイスが取得したデータは「**Console**」もしくは「Azure Blob Storage」もしくは「Local Storage」に保存されます。 +
-サンプルアプリケーションは「**Cloud SDK**」等を使用して「**Console**」もしくは「Azure Blob Storage」もしくは「Local Storage」からデータを取得します。
+サンプルアプリケーションから「**Cloud SDK**」を呼び出し、「**Console**」を経由してエッジデバイスを制御します。 +
+エッジデバイスが取得したデータは「**Console**」もしくはAzure Blob StorageもしくはAmazon S3もしくはLocal Storageに保存されます。 +
+サンプルアプリケーションは「**Cloud SDK**」等を使用して「**Console**」もしくはAzure Blob StorageもしくはAmazon S3もしくはLocal Storageからデータを取得します。
 
 === サンプルアプリケーションが依存するPackage（フレームワーク）
 
@@ -219,6 +244,7 @@ image::diagram_ts.png[alt="サンプルアプリケーションの概要",width=
 * https://google.github.io/flatbuffers/[FlatBuffers]
 * https://github.com/nodeca/js-yaml[js-yaml]
 * https://github.com/Azure/azure-sdk-for-js[azure-sdk-for-js]
+* https://aws.amazon.com/jp/sdk-for-javascript/[AWS SDK for JavaScript]
 
 
 [#_Execute_sampleapp]
@@ -249,8 +275,8 @@ console_access_settings:
 * `**client_id**` に、登録したアプリケーションのクライアントIDを指定します。 +
 +
 
-IMPORTANT: クライアントIDとシークレットの取得方法詳細は、 https://developer.aitrios.sony-semicon.com/documents/portal-user-manual[「**Portalユーザーマニュアル**」] の「SDK用のClient Secretを発行する」をお読みください。 + 
-コンソールエンドポイントとポータル認証エンドポイントの取得方法詳細は、link:++https://developer.aitrios.sony-semicon.com/file/download/rest-api-authentication++[こちらのドキュメント] をお読みください。 +
+IMPORTANT: クライアントIDとシークレットの取得方法詳細は、 https://developer.aitrios.sony-semicon.com/edge-ai-sensing/documents/portal-user-manual/[「**Portalユーザーマニュアル**」] の「SDK用のClient Secretを発行する」をお読みください。 + 
+コンソールエンドポイントとポータル認証エンドポイントの取得方法詳細は、link:++https://developer.aitrios.sony-semicon.com/file/download/edge-ai-sensing-portal-console-end-point-info/++[「**PortalおよびConsoleのエンドポイント情報**」] をお読みください。 +
 これらは「**Console**」へのアクセス情報となります。 + 
 公開したり、他者との共有をせず、取り扱いには十分注意してください。
 +
@@ -287,7 +313,7 @@ IMPORTANT: コンソールエンドポイントとクライアントIDとシー�
 NOTE: Proxy環境でサンプルアプリケーション実行する場合、環境変数 `**https_proxy**` の設定をしてください。
 
 . Codespacesまたは、リポジトリをCloneした環境上で [src/common]配下に[azure_access_settings.yaml]を作成し接続先情報を設定します。 +
-本設定は、推論結果取得先が「Azure Blob Storage」の時に設定します。
+本設定は、推論結果取得先がAzure Blob Storageの時に設定します。
 
 
 +
@@ -302,11 +328,37 @@ azure_access_settings:
 ----
 |===
 +
-* `**connection_string**` に、「Azure Blob Storage」の接続情報を指定します。 +
-* `**container_name**` に、「Azure Blob Storage」のコンテナ名を指定します。 +
+* `**connection_string**` に、Azure Blob Storageの接続情報を指定します。 +
+* `**container_name**` に、Azure Blob Storageのコンテナ名を指定します。 +
 +
 
-IMPORTANT: これらは「Azure Blob Storage」へのアクセス情報となります。 +
+IMPORTANT: これらはAzure Blob Storageへのアクセス情報となります。 +
+公開したり、他者との共有をせず、取り扱いには十分注意してください。 +
+
+. Codespacesまたは、リポジトリをCloneした環境上で [src/common]配下に[aws_access_settings.yaml]を作成し接続先情報を設定します。 +
+本設定は、推論結果取得先がAmazon S3の時に設定します。
+
++
+|===
+|src/common/aws_access_settings.yaml
+a|
+[source,Yaml]
+----
+aws_access_settings:
+  bucket_name: "バケット名"
+  access_key_id: "アクセスキーID"
+  secret_access_key: "シークレットアクセスキー"
+  region: "リージョン"
+----
+|===
++
+* `**bucket_name**` に、Amazon S3のバケット名を設定します。 +
+* `**access_key_id**` に、Amazon S3のアクセスキーIDを指定します。 +
+* `**secret_access_key**` に、Amazon S3のシークレットアクセスキーを指定します。 +
+* `**region**` に、Amazon S3のリージョンを指定します。 +
++
+
+IMPORTANT: これらはAmazon S3へのアクセス情報となります。 +
 公開したり、他者との共有をせず、取り扱いには十分注意してください。 +
 
 . Codespacesまたは、リポジトリをCloneした環境上で [src/common]配下に[settings.ts]に接続先情報を設定します。
@@ -319,6 +371,7 @@ a|
 export const SERVICE = {
   Console: 'console',
   Azure: 'azure',
+  AWS: 'aws',
   Local: 'local'
 } as const
 type SERVICE_TYPE = typeof SERVICE[keyof typeof SERVICE];
@@ -329,7 +382,7 @@ export const LOCAL_ROOT = ''
 |===
 +
 * `**CONNECTION_DESTINATION**` に、推論結果取得先を設定します。デフォルト値は `**SERVICE.Console**` 設定です。 +
-* `**LOCAL_ROOT**` に、「Local Storage」のパスを指定します。 +
+* `**LOCAL_ROOT**` に、Local Storageのパスを指定します。 +
 本設定は、 `**CONNECTION_DESTINATION**` に `**SERVICE.Local**` を指定した場合に利用されます。 +
 
 NOTE: Dev Container環境を利用する場合、Local Storageをgit cloneしたフォルダ内にフォルダ作成し、 +
@@ -353,7 +406,7 @@ image::launch_app_ts_ja.png[alt="サンプルアプリケーションを開始�
 
 . ブラウザで http://localhost:3000 (Codespacesの場合は、ポート転送されたURL)を開く 
 . [**DeviceID**]のリストからDevice IDを選択する
-. [**START**]をクリックし、エッジAIデバイスの推論を開始する
+. [**START**]をクリックし、エッジデバイスの推論を開始する
 
 image::start_inference_ts_ja.png[alt="推論を開始する",width="700",align="center"]
 
@@ -364,13 +417,13 @@ image::running_ts_ja.png[alt="推論結果と画像を確認する",width="700",
 
 
 === 5.推論を停止する
-サンプルアプリケーションの[**STOP**]をクリックし、エッジAIデバイスの推論を停止します。
+サンプルアプリケーションの[**STOP**]をクリックし、エッジデバイスの推論を停止します。
 
 image::stop_inference_ts_ja.png[alt="推論を停止する",width="700",align="center"]
 
 == ユースケース毎の実装説明
 
-=== 1.「**Console**」に登録されたエッジAIデバイスの情報を取得する
+=== 1.「**Console**」に登録されたエッジデバイスの情報を取得する
 
 「**Console**」を利用するために、「**Cloud SDK**」のClientを生成します。 +
 生成したClientから、「**Console**」の提供する機能を利用します。
@@ -395,7 +448,7 @@ const client = await Client.createInstance(config)
 `**Config**` に接続情報を指定し、 `**config**` を生成します。 +
 `**Client**` に `**config**` を指定し、 `**client**` を生成します。
 
-* デバイス情報取得
+* エッジデバイス情報取得
 +
 [source,TypeScript]
 ----
@@ -403,11 +456,11 @@ const config = new Config(console_endpoint, portal_authorization_endpoint, clien
 const client = await Client.createInstance(config)
 const res = await client?.deviceManagement?.getDevices()
 ----
-上記の例では、「**Console**」から登録されているエッジAIデバイスの情報を取得しています。 +
-生成したClientを利用し、`**deviceManagement**` が提供する `**getDevices**` を実行することでデバイス情報を取得できます。 +
+上記の例では、「**Console**」から登録されているエッジデバイスの情報を取得しています。 +
+生成したClientを利用し、`**deviceManagement**` が提供する `**getDevices**` を実行することでエッジデバイス情報を取得できます。 +
 オプションで `**queryParams**` に取得条件を設定できます。
 
-* デバイスパラメータ取得
+* エッジデバイスパラメータ取得
 +
 [source,TypeScript]
 ----
@@ -416,9 +469,9 @@ const client = await Client.createInstance(config)
 const res = await client.deviceManagement.getDevices()
 ----
 上記のように、`**client**` を生成します。 +
-`**client**` の `**deviceManagement**` が提供する `**getCommandParameterFile**` を使用してデバイスのパラメータを取得します。
+`**client**` の `**deviceManagement**` が提供する `**getCommandParameterFile**` を使用してエッジデバイスのパラメータを取得します。
 
-=== 2.エッジAIデバイスへ推論開始を指示する
+=== 2.エッジデバイスへ推論開始を指示する
 
 * 推論開始
 +
@@ -494,8 +547,8 @@ const deserializedInferenceData = deserialize(inferenceData)
 この変換処理の詳細について、 https://github.com/SonySemiconductorSolutions/aitrios-sdk-deserialization-sample[「Cloud SDK Deserialize サンプル」] を参照してください。
 
 
-=== 4.「Azure Blob Storage」の推論結果・画像を取得する
-「Azure Blob Storage」から推論結果・画像を取得するために、hooksディレクトリ配下のgetAzureStorage.tsを利用します。
+=== 4.Azure Blob Storageの推論結果・画像を取得する
+Azure Blob Storageから推論結果・画像を取得するために、hooksディレクトリ配下のgetAzureStorage.tsを利用します。
 
 * 画像リストを取得する
 +
@@ -588,8 +641,148 @@ export async function getInferenceFromAzure (retryCount: number, deviceId: strin
 `**endInferenceTime**` は検索終了位置を表すタイムスタンプです。 +
 `**numberOfInferenceResult**` は取得する推論結果の数です。 +
 
-=== 5.「Local Storage」の推論結果・画像を取得する
-「Local Storage」から推論結果・画像を取得するために、hooksディレクトリ配下のgetLocalStorage.tsを利用します。
+=== 5.Amazon S3の推論結果・画像を取得する
+Amazon S3から推論結果・画像を取得するために、storageディレクトリ配下のgetAwsStorageを利用します。
+
+* 画像リストを取得する
++
+[source,TypeScript]
+----
+async function getListObjects (deviceId: string, subDirectory: string, client: S3Client, listObjInput: ListObjectsCommandInput, resultList?: string[]): Promise<any> {
+  const listObjCommand = new ListObjectsV2Command(listObjInput)
+  const listObjData = await client.send(listObjCommand)
+  const returnList = resultList || []
+
+  if (listObjData !== undefined && listObjData.Contents !== undefined) {
+    for (const content of listObjData.Contents) {
+      const key = JSON.stringify(content)
+      if (key !== undefined) {
+        returnList.push(JSON.parse(key))
+      }
+    }
+    if (listObjData.IsTruncated) {
+      const input = { ...listObjInput, StartAfter: listObjData.Contents.slice(-1)[0].Key }
+      return getListObjects(deviceId, subDirectory, client, input, returnList)
+    }
+  }
+  return returnList
+}
+----
+`**AWS SDK for JavaScript**` が提供する `**ListObjectsV2Command**` を使用してバケット内のオブジェクトのリストを取得します。 +
+取得したオブジェクトのKeyを取得し、リストに入れ返却します。
+
+[source,TypeScript]
+----
+export async function getImageFromAws (retryCount: number, deviceId: string, subDirectory: string, orderBy?: string, skip?: number, numberOfImages?: number): Promise<getImageFromAwsResult> {
+  const response: getImageFromAwsResult = {
+    total_image_count: 0,
+    images: []
+  }
+  const { client, bucket } = await getS3Client()
+  const listObjInput = {
+    Bucket: bucket,
+    Prefix: `${deviceId}/image/${subDirectory}`
+  }
+  orderBy = orderBy || 'ASC' // ASC is default value
+  skip = skip || 0 // 0 is default value
+  numberOfImages = numberOfImages || 50
+
+  const listObjData = await getListObjects(deviceId, subDirectory, client, listObjInput)
+  const images: getImageFromAwsResult['images'] = []
+  if (listObjData.length !== 0) {
+    if (orderBy === 'DESC') {
+      listObjData.reverse()
+    }
+    for (let i = 0; i < listObjData.length; i++) {
+      if (i === numberOfImages) break
+      if (listObjData[i + skip] === undefined || listObjData[i + skip].Key === undefined) break
+      const fileName = listObjData[i + skip].Key
+      const getObjInput = {
+        Bucket: bucket,
+        Key: fileName
+      }
+      const command = new GetObjectCommand(getObjInput)
+      const imageData = await client.send(command)
+      if (fileName !== undefined && imageData !== undefined && imageData.Body !== undefined) {
+        images.push({
+          name: fileName.split('/')[3],
+          contents: await imageData.Body.transformToString('base64')
+        })
+      }
+    }
+    if (images.length !== 0) {
+      response.total_image_count = listObjData.length
+      response.images = images
+      return response
+    }
+  }
+  if (retryCount > 0) {
+    await setTimeout(1000)
+    return getImageFromAws(retryCount - 1, deviceId, subDirectory, orderBy, skip, numberOfImages)
+  }
+  return response
+}
+----
+`**AWS SDK for JavaScript**` が提供する `**GetObjectCommand**` を使用して、オブジェクトを取得します +
+画像ファイル名とbase64を作成し、`**total_image_count**` と合わせて返却します。
+
+* 最新の画像に紐づく推論結果を取得する
+[source,TypeScript]
++
+----
+export async function getInferenceFromAws (retryCount: number, deviceId: string, subDirectory: string, startInferenceTime?: string, endInferenceTime?: string, numberOfInferenceResult?: number): Promise<string[]> {
+  const { client, bucket } = await getS3Client()
+  const serializeData: string[] = []
+  const listObjInput = {
+    Bucket: bucket,
+    Prefix: `${deviceId}/metadata/${subDirectory}`
+  }
+  numberOfInferenceResult = numberOfInferenceResult || 20
+  const listObjData = await getListObjects(deviceId, subDirectory, client, listObjInput)
+  if (listObjData.length !== 0) {
+    for (let i = 0; i < listObjData.length; i++) {
+      if (i === numberOfInferenceResult) break
+      const key = listObjData[i].Key
+      if (key !== undefined) {
+        const timestamp = path.parse(key).name
+        if ((startInferenceTime === undefined || timestamp >= startInferenceTime) &&
+          (endInferenceTime === undefined || timestamp < endInferenceTime)) {
+          const getObjInput = {
+            Bucket: bucket,
+            Key: key
+          }
+          const command = new GetObjectCommand(getObjInput)
+          const inferenceData = await client.send(command)
+          if (key !== undefined && inferenceData !== undefined && inferenceData.Body !== undefined) {
+            const inferenceText = await inferenceData.Body.transformToString()
+            if (inferenceText !== undefined) {
+              const inferenceJson = JSON.parse(inferenceText)
+              serializeData.push(inferenceJson)
+            }
+          }
+        } else if (endInferenceTime !== undefined && timestamp > endInferenceTime) {
+          break
+        }
+      }
+    }
+  }
+  if (serializeData.length !== 0) {
+    return serializeData
+  }
+  if (retryCount > 0) {
+    await setTimeout(1000)
+    return getInferenceFromAws(retryCount - 1, deviceId, subDirectory, startInferenceTime, endInferenceTime, numberOfInferenceResult)
+  }
+  return serializeData
+}
+----
+`**AWS SDK for JavaScript**` が提供する `**GetObjectCommand**` を使用して、オブジェクトを取得します +
+`**startInferenceTime**` は検索開始位置を表すタイムスタンプです。 +
+`**endInferenceTime**` は検索終了位置を表すタイムスタンプです。 +
+`**numberOfInferenceResult**` は取得する推論結果の数です。 +
+
+=== 6.Local Storageの推論結果・画像を取得する
+Local Storageから推論結果・画像を取得するために、hooksディレクトリ配下のgetLocalStorage.tsを利用します。
 
 * 画像リストを取得する
 +
@@ -672,7 +865,7 @@ export function getInferenceFromLocal (deviceId: string, subDirectory: string, s
 `**endInferenceTime**` は検索終了位置を表すタイムスタンプです。 +
 `**numberOfInferenceResult**` は取得する推論結果の数です。 +
 
-=== 6.エッジAIデバイスへの推論停止を指示する
+=== 7.エッジデバイスへの推論停止を指示する
 
 * 推論停止
 +
@@ -682,7 +875,7 @@ const config = new Config(console_endpoint, portal_authorization_endpoint, clien
 const client = await Client.createInstance(config)
 const res = await calClient.deviceManagement.stopUploadInferenceResult(deviceId)
 ----
-エッジAIデバイスの推論処理を停止するには、上記のように `**client**` の `**deviceManagement**` が提供する `**stopUploadInferenceResult**` を実行します。 +
+エッジデバイスの推論処理を停止するには、上記のように `**client**` の `**deviceManagement**` が提供する `**stopUploadInferenceResult**` を実行します。 +
 引数の `**deviceId**` には、停止対象の Device ID を指定します。
 
 == 参考資料
