@@ -54,7 +54,7 @@ export default function Home () {
     axios.get('/api/getDeviceData', { timeout: TIME_OUT })
       .then(response => {
         if (Object.keys(response.data).length === 0) {
-          return window.alert('Connected device not found.')
+          return window.alert('Connected Edge Device not found.')
         }
         setDeviceData(response.data.deviceId)
       })

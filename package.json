@@ -1,6 +1,6 @@
 {
   "name": "typescript-sample",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "scripts": {
     "build": "cd src && ts-node -P tsconfig.node.json checkLocalRoot.ts && next build",
@@ -13,11 +13,13 @@
     "fix": "eslint src --ext ts --fix"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.465.0",
+    "@aws-sdk/s3-request-presigner": "^3.468.0",
     "@azure/storage-blob": "^12.15.0",
     "@peculiar/asn1-schema": "^2.0.37",
     "@peculiar/x509": "^1.9.3",
     "axios": "^1.6.0",
-    "consoleaccesslibrary": "file:.devcontainer/Dependencies/aitrios-sdk-console-access-lib-ts/src/consoleaccesslibrary-1.1.0.tgz",
+    "consoleaccesslibrary": "file:.devcontainer/Dependencies/aitrios-sdk-console-access-lib-ts/src/consoleaccesslibrary-1.2.0.tgz",
     "date-fns": "^2.30.0",
     "date-fns-tz": "^2.0.0",
     "flatbuffers": "23.1.21",

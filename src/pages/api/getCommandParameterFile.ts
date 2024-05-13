@@ -32,11 +32,15 @@ const getCommandParameterFile = async (deviceId: string) => {
 
   const mode = 'Mode' in matchData[0].parameter.commands[0].parameters ? matchData[0].parameter.commands[0].parameters.Mode : 0
   const uploadMethodIR = 'UploadMethodIR' in matchData[0].parameter.commands[0].parameters ? matchData[0].parameter.commands[0].parameters.UploadMethodIR : 'MQTT'
+  const fileFormat = 'FileFormat' in matchData[0].parameter.commands[0].parameters ? matchData[0].parameter.commands[0].parameters.FileFormat : 'JPG'
 
   if (!((uploadMethodIR === 'MQTT' && CONNECTION_DESTINATION === SERVICE.Console) ||
-      (uploadMethodIR === 'BlobStorage' && CONNECTION_DESTINATION === SERVICE.Azure) ||
+      (uploadMethodIR === 'BlobStorage' && (CONNECTION_DESTINATION === SERVICE.Azure || CONNECTION_DESTINATION === SERVICE.AWS)) ||
       (uploadMethodIR === 'HTTPStorage' && CONNECTION_DESTINATION === SERVICE.Local))) {
     throw new Error('Command parameters and CONNECTION_DESTINATION do not match.')
+  }
+  if (fileFormat !== 'JPG') {
+    throw new Error('Command Parameter FileFormat supports only JPG.')
   }
 
   const result = { mode, uploadMethodIR }
